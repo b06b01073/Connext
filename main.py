@@ -9,7 +9,7 @@ agent_token, board = env.register(agent)
 
 while True:
     action = agent.step(board)
-    result = env.step(action)
+    board, result = env.step(action)
     env.render()
     if result != 0:
         break

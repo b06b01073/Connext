@@ -10,6 +10,7 @@ class ConnectX:
         self.agent = None
         self.agent_token = None
         self.terminated = False
+
         self.first = None # embedded_player goes first if self.first == 0 else self.agent goes first
 
         # record the last move for better UI
@@ -28,16 +29,16 @@ class ConnectX:
         self.last_agent_move = self.board.step(col, self.agent_token)
         if self.board.terminated:   # the self.agent won by making the move 
             self.terminated = True
-            return 1
+            return self.board, 1
 
         col = self.embedded_player.step(self.board)
         self.last_embedded_player_move = self.board.step(col, self.embedded_player_token)
         if self.board.terminated:   # the self.embedded_player won by making the move
             self.terminated = True
-            return -1
+            return self.board, -1
         
         # non-terminal state
-        return 0
+        return self.board, 0
         
 
     def register(self, agent):
@@ -76,6 +77,9 @@ class ConnectX:
             self.agent_token = 1
 
     def display_start(self):
+        '''
+        Display the starting position from the agent's point of view. If the agent goes first, then the starting board should be empyt. If the embedded_player goes first, then the starting board should have one token.
+        '''
         print('The game has started!')
         first_player = 'embedded_player' if self.first == 0 else 'agent'
         second_player = 'embedded_player' if self.first != 0 else 'agent'
@@ -119,13 +123,16 @@ class Board:
 
     def __is_end(self, row, col, token):
         '''
-        Check whether the game has ended(one of the player won).
-        The is_end uses coord (row, col) as a center to check the winning condition.
+        The __is_end uses coord (row, col) as a center to check the winning condition.
+
+        The returned value `terminated` is decided based on two conditions:
+            1. Whether there is a winner
+            2. Whether the game is a draw        
         '''
 
         terminated = self.__check_horizontal(row, col, token) or self.__check_vertical(row, col, token) or self.__check_diagonal(row, col, token) or self.steps == self.width * self.height
 
-        return True if terminated else False 
+        return terminated
 
     def __check_horizontal(self, row, col, token):
         connected_tokens = 1
@@ -216,6 +223,10 @@ class Board:
         
 
     def render(self, last_embedded_player_move, last_agent_move, embedded_player_token, agent_token):
+        '''
+        Print the board position with color and bold text
+        '''
+
         for i in range(self.width + 2):
             print('*', end=' ')
         print('')
