@@ -78,7 +78,7 @@ class ConnectX:
 
     def display_start(self):
         '''
-        Display the starting position from the agent's point of view. If the agent goes first, then the starting board should be empyt. If the embedded_player goes first, then the starting board should have one token.
+        Display the starting position from the agent's point of view. If the agent goes first, then the starting board should be empty. If the embedded_player goes first, then the starting board should have one token.
         '''
         print('The game has started!')
         first_player = 'embedded_player' if self.first == 0 else 'agent'

@@ -4,7 +4,7 @@ from env import ConnectX
 env = ConnectX()
 env.embedded_player = RandomAgent()
 
-agent = RandomAgent()
+agent = Human()
 agent_token, board = env.register(agent)
 
 while True:

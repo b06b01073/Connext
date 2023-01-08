@@ -8,8 +8,34 @@ class Agent:
         pass
 
     def get_legal_moves(self, board):
+        '''
+        Return a list of indices of legal moves
+        '''
         legal_moves = [1 if token == 0 else 0 for token in board[0]] 
         return legal_moves
+
+    def flip_board(self, board):
+        '''
+        This function flip the tokens on the board(1 -> 2, 2 -> 1).
+
+        To simplify the training process, the some agents always assume it plays the token 1. If self.token is 2, then the flip_board() function call is neccessary.
+
+        The flip_board function will be called by the child class in the beginning of their step function call.
+        '''
+
+        flipped_board = np.zeros((board.height, board.width), dtype='uint8')
+        one_indices = np.where(board.board == 1)
+        two_indices = np.where(board.board == 2)
+
+        # flip 1 to 2
+        for row, col in zip(one_indices[0], one_indices[1]):
+            flipped_board[row][col] = 2
+
+        # flip 2 to 1
+        for row, col in zip(two_indices[0], two_indices[1]):
+            flipped_board[row][col] = 1
+
+        return flipped_board
     
 
 class Human(Agent):
@@ -17,6 +43,7 @@ class Human(Agent):
         super().__init__()
 
     def step(self, board):
+        self.flip_board(board)
         return int(input('Next move: '))
     
 class RandomAgent(Agent):
