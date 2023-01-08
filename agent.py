@@ -1,4 +1,6 @@
 import numpy as np
+from agent_config import config
+from MCTS import naive_mcts
 
 class Agent:
     def __init__(self):
@@ -12,6 +14,7 @@ class Agent:
         Return a list of indices of legal moves
         '''
         legal_moves = [1 if token == 0 else 0 for token in board[0]] 
+        legal_moves = [i for i in range(len(legal_moves)) if legal_moves[i] == 1]
         return legal_moves
 
     def flip_board(self, board):
@@ -46,12 +49,24 @@ class Human(Agent):
         self.flip_board(board)
         return int(input('Next move: '))
     
+
 class RandomAgent(Agent):
     def __init__(self):
         super().__init__()
 
     def step(self, board):
         legal_moves = self.get_legal_moves(board)
-        legal_moves = [i for i in range(len(legal_moves)) if legal_moves[i] == 1]
         return np.random.choice(legal_moves)
 
+
+class MCTSAgent(Agent):
+    def __init__(self):
+        super().__init__()
+        self.config = config['mcts_agent']
+        # self.rollout_policy = self.config['rollout_policy']
+
+    def step(self, board):
+        # assume the rollout are composed of random gameplay now
+
+        return naive_mcts(board, self.token)
+        

@@ -1,6 +1,7 @@
 import numpy as np
 from env_config import config
 from termcolor import cprint, colored
+from copy import deepcopy
 
 class ConnectX:
     def __init__(self):
@@ -37,8 +38,8 @@ class ConnectX:
             self.terminated = True
             return self.board, -1
         
-        # non-terminal state
-        return self.board, 0
+        # non-terminal state, we should always return an copy to prevent agent modifies the internel state of the env
+        return deepcopy(self.board), 0
         
 
     def register(self, agent):
@@ -59,9 +60,9 @@ class ConnectX:
             col = self.embedded_player.step(self.board)
             self.last_embedded_player_move = self.board.step(col, self.embedded_player_token)
         
-        self.display_start()
+        # self.display_start()
 
-        return self.agent_token, self.board
+        return self.agent_token, deepcopy(self.board)
 
     def pick_first(self):
         '''
@@ -71,9 +72,11 @@ class ConnectX:
 
         if self.first == 0:
             self.embedded_player_token = 1
+            self.embedded_player.token = 1
             self.agent_token = 2
         else:
             self.embedded_player_token = 2
+            self.embedded_player.token = 2
             self.agent_token = 1
 
     def display_start(self):
@@ -107,6 +110,12 @@ class Board:
         self.terminated = False
         self.steps = 0
 
+        self.winner_token = 0 # 0 if draw, 1 if player with token 1 won, 2 if player with token 2 won
+
+        self.horizontal_end = False
+        self.vertical_end = False
+        self.diagonal_end = False
+
     def step(self, col, token):
         '''
         The ConnectX env put an token on the col-th column, and it also check whether the move ends the game. 
@@ -116,8 +125,10 @@ class Board:
         for row in range(self.height):
             if row == self.height - 1 or self.board[row + 1][col] != 0:
                 self.board[row][col] = token
-                self.terminated = self.__is_end(row, col, token)
+
+                # warning: step need to increment before the __is_end function call
                 self.steps += 1
+                self.terminated = self.__is_end(row, col, token)
                 return row, col
 
 
@@ -131,6 +142,12 @@ class Board:
         '''
 
         terminated = self.__check_horizontal(row, col, token) or self.__check_vertical(row, col, token) or self.__check_diagonal(row, col, token) or self.steps == self.width * self.height
+
+        if terminated:
+            self.winner_token = token
+
+        # if self.steps == self.width * self.height:
+        #     print('Maximum steps')
 
         return terminated
 
@@ -150,6 +167,8 @@ class Board:
                 connected_tokens += 1
             else:
                 break
+        if connected_tokens >= self.X:
+            self.horizontal_end = True
 
         return True if connected_tokens >= self.X else False
 
@@ -169,12 +188,18 @@ class Board:
                 connected_tokens += 1
             else:
                 break
+
+        if connected_tokens >= self.X:
+            self.vertical_end = True  
+        
         return True if connected_tokens >= self.X else False
 
     def __check_diagonal(self, row, col, token):
         terminated = self.__upright_downleft(row, col, token) or self.__upleft_downright(row, col, token) 
 
-        
+        if terminated:
+            self.diagonal_end = True
+
         return True if terminated else False
     
     def __upright_downleft(self, row, col, token):
@@ -190,12 +215,16 @@ class Board:
             i += 1
 
         # downleft
+        i = 1
         while col - i >= 0 and row + i < self.height:
             if self.board[row + i][col - i] == token:
                 connected_tokens += 1
             else:
                 break
             i += 1
+
+        # if connected_tokens >= self.X:
+        #     print('__upright_downleft')
 
         return True if connected_tokens >= self.X else False
         
@@ -211,6 +240,7 @@ class Board:
                 break
             i += 1
 
+        i = 1
         # downright
         while col + i < self.width and row + i < self.height:
             if self.board[row + i][col + i] == token:
@@ -219,8 +249,18 @@ class Board:
                 break
             i += 1
 
+        # if connected_tokens >= self.X:
+        #     print('__upleft_downright')
         return True if connected_tokens >= self.X else False
-        
+    
+    
+    def get_legal_moves(self):
+        '''
+        Return a list of indices of legal moves
+        '''
+        legal_moves = [1 if token == 0 else 0 for token in self.board[0]] 
+        legal_moves = [i for i in range(len(legal_moves)) if legal_moves[i] == 1]
+        return legal_moves
 
     def render(self, last_embedded_player_move, last_agent_move, embedded_player_token, agent_token):
         '''
@@ -262,3 +302,5 @@ class Board:
                     
     def __getitem__(self, idx):
         return self.board[idx]
+
+    
