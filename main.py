@@ -12,9 +12,9 @@ def run():
     global draw
 
     env = ConnectX()
-    env.embedded_player = RandomAgent()
+    env.embedded_player = MCTSAgent(simulations=100)
 
-    agent = MCTSAgent()
+    agent = MCTSAgent(simulations=20)
     agent_token, board = env.register(agent)
     agent.token = agent_token
 

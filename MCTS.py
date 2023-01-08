@@ -34,14 +34,14 @@ class Node:
             self.is_leaf = False
 
 
-def naive_mcts(board, token):
+def naive_mcts(board, token, simulations):
     '''
     This function call takes a board position as a root of Monte Carlo search tree, and follows the `rollout_policy` during the rollout stage.
     '''
     mcst = Node(board, token, is_root=True)
 
     # run 100 simulations 應該要以一顆mcst為單位做平行搜索，
-    for simulation_count in range(50):
+    for simulation_count in range(simulations):
         # search until meet a leaf
         leaf = search_leaf(mcst, simulation_count)
         leaf = expand(leaf)

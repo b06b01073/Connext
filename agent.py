@@ -60,13 +60,13 @@ class RandomAgent(Agent):
 
 
 class MCTSAgent(Agent):
-    def __init__(self):
+    def __init__(self, simulations):
         super().__init__()
         self.config = config['mcts_agent']
-        # self.rollout_policy = self.config['rollout_policy']
+        self.simulations = simulations
 
     def step(self, board):
         # assume the rollout are composed of random gameplay now
 
-        return naive_mcts(board, self.token)
+        return naive_mcts(board, self.token, self.simulations)
         
