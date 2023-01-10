@@ -4,6 +4,19 @@ from termcolor import cprint, colored
 from copy import deepcopy
 
 class ConnectX:
+    ''' The environment of the RL framework.
+
+    Public Attributes:
+        board: a Board class instance that represent the connectX board
+        embedded_player: a Agent class instance that represents an agent which is the opponent of the real agent
+        embedded_player_token: an integer that represents the token of the embedded player
+        agent: a Agent class instance that represents the real agent
+        agent_token: an integer that represents the token of the agent
+        terminated: a boolean that if True if the game has ended
+        first: an integer that represent which player goes first 
+        last_embedded_player_move: a integer tuple that represent the last move played by the embedded_player
+        last_agent_move: a integer tuple that represent the last move played by the agent
+    '''
     def __init__(self):
         self.board = Board()
         self.embedded_player = None
@@ -19,13 +32,16 @@ class ConnectX:
         self.last_agent_move = None
 
     def step(self, col):
-        '''
-        The agent calls ConnectX.step(col) will put an token at the col-th column.
+        ''' The agent calls ConnectX.step(col) will put an token at the col-th column.
 
-        Return value:
-            1, if self.agent won
-            -1, if self.embedded_player won
-            0, otherwise
+        Arguments:
+            col: an integer that represents the move made by the caller
+
+        Returns:
+            Returns an integer that represents the board and result of the game, the result of the game is defined as follow:
+                1, if self.agent won
+                -1, if self.embedded_player won
+                0, otherwise
         '''
         self.last_agent_move = self.board.step(col, self.agent_token)
         if self.board.terminated:   # the self.agent won by making the move 
@@ -43,12 +59,19 @@ class ConnectX:
         
 
     def register(self, agent):
-        '''
-        The ConnectX.register(agent) call register the agent as self.agent.
-
+        ''' The ConnectX.register(agent) call register the agent as self.agent.
+        
         Once an agent registerd in the env, the env will decide who goes first by the self.pick_first() function call. The player goes first has token of 1, the player goes second has token of 2.
 
-        This function call also return the token of self.agent and the first observation of the board.
+        If the agent goes second, then this function call forced the embedded_agent make a move immediatly.
+
+
+        Arguments: 
+            agent: an Agent class instance that represents the registering agent
+
+        Returns:
+            This function call returns the token of self.agent and the first observation of the board.
+            
         '''
 
         self.agent = agent
@@ -65,8 +88,7 @@ class ConnectX:
         return self.agent_token, deepcopy(self.board)
 
     def pick_first(self):
-        '''
-        decide the first player
+        ''' decide the first player of the game
         '''
         self.first = np.random.randint(low=0, high=2)
 
@@ -80,7 +102,8 @@ class ConnectX:
             self.agent_token = 1
 
     def display_start(self):
-        '''
+        ''' Log the starting message 
+
         Display the starting position from the agent's point of view. If the agent goes first, then the starting board should be empty. If the embedded_player goes first, then the starting board should have one token.
         '''
         print('The game has started!')
@@ -96,12 +119,24 @@ class ConnectX:
         self.render()
 
     def render(self):
-        '''
-        print the self.board
+        ''' print the board
         '''
         self.board.render(self.last_embedded_player_move, self.last_agent_move, self.embedded_player_token, self.agent_token)
 
 class Board:
+    ''' This class represent the board of the connectX game
+
+    Public Attributes:
+        height: an integer that represents the height of the board 
+        width: an integer that represents the width of the board 
+        X: an integer that represents the number of token a player has to connect in order to win
+        board: a 2D nparray that represents the board
+        terminated: a boolean that if True if the game has ended
+        steps: an integer that represent how many steps has taken in the game
+        winner_token: an integer that represent the winner of the game
+
+    '''
+
     def __init__(self):
         self.height = config['height']
         self.width = config['width']
@@ -112,13 +147,16 @@ class Board:
 
         self.winner_token = 0 # 0 if draw, 1 if player with token 1 won, 2 if player with token 2 won
 
-        self.horizontal_end = False
-        self.vertical_end = False
-        self.diagonal_end = False
-
     def step(self, col, token):
-        '''
+        ''' Play a move on the board
         The ConnectX env put an token on the col-th column, and it also check whether the move ends the game. 
+
+        Arguments:
+            col: an integer that represent column of the move
+            token: an integer that represent the player
+
+        Returns:
+            A tuple that represents the coordinates of the final position of the played token.
         '''
         assert col >= 0 and col < self.width and self.board[0][col] == 0, 'Illegal move!'
 
@@ -133,8 +171,7 @@ class Board:
 
 
     def __is_end(self, row, col, token):
-        '''
-        The __is_end uses coord (row, col) as a center to check the winning condition.
+        ''' The __is_end uses coord (row, col) as a center to check the winning condition
 
         The returned value `terminated` is decided based on two conditions:
             1. Whether there is a winner
@@ -167,8 +204,6 @@ class Board:
                 connected_tokens += 1
             else:
                 break
-        if connected_tokens >= self.X:
-            self.horizontal_end = True
 
         return True if connected_tokens >= self.X else False
 
@@ -189,16 +224,12 @@ class Board:
             else:
                 break
 
-        if connected_tokens >= self.X:
-            self.vertical_end = True  
         
         return True if connected_tokens >= self.X else False
 
     def __check_diagonal(self, row, col, token):
         terminated = self.__upright_downleft(row, col, token) or self.__upleft_downright(row, col, token) 
 
-        if terminated:
-            self.diagonal_end = True
 
         return True if terminated else False
     
