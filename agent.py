@@ -1,6 +1,7 @@
 import numpy as np
 from agent_config import config
 from MCTS import naive_mcts
+from copy import deepcopy
 
 class Agent:
     ''' The Agent class is the base class of agents in the RL framework.
@@ -112,5 +113,36 @@ class MCTSAgent(Agent):
         Returns:
             An integer given by the result of MCTS that represents the next move.
         '''
-        return naive_mcts(board, self.token, self.simulations)
-        
+        return naive_mcts(board, self.token, self.simulations, self.rollout_policy)
+
+
+    def rollout_policy(self, node):
+        ''' The policy that the rollout stage is going to follow
+
+        The rollout policy is a random policy in this version.
+
+        Arguments:
+            node: A Node class instance that represents the starting point of rollout.
+
+        Returns:
+            An integer that represents the token of the winner after the rollout.         
+        '''
+
+        board = deepcopy(node.state)
+        token = node.token
+        while True:
+            legal_moves = board.get_legal_moves()
+
+            move = np.random.choice(legal_moves)
+            board.step(move, token)
+
+            if board.terminated:
+                break
+
+            if token == 1:
+                token = 2
+            else:
+                token = 1
+            
+        return board.winner_token
+            

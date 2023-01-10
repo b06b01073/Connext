@@ -52,13 +52,14 @@ class Node:
             self.is_leaf = False
 
 
-def naive_mcts(board, token, simulations):
+def naive_mcts(board, token, simulations, rollout_policy):
     ''' Run a Monte Carlo tree search(mcts)
 
     Arguments: 
         board: a Board class instance 
         token: an integer that represents the token of the agent who makes this function call
         simulations: an integer that represent the number of simulations are going to be ran in the mcts.
+        rollout_policy: a function implemented by the caller Agent instance which represents the rollout policy
 
     Returns:
         An integer that represents the move decided by the mcts.
@@ -72,7 +73,7 @@ def naive_mcts(board, token, simulations):
         leaf = expand(leaf)
 
         # get the terminal node by following the rollout policy
-        winner_token = rollout(leaf)
+        winner_token = rollout(leaf, rollout_policy)
         
         backpropagate(leaf, winner_token, mcst.token)
 
@@ -158,11 +159,12 @@ def get_ucb(node, simulation_count):
     '''
     return node.expected_reward + C * math.sqrt(math.log(simulation_count) / node.visited_count)
 
-def rollout(node):
+def rollout(node, rollout_policy):
     ''' Do the rollout from the node
 
     Arguments:
         node: a Node class instance that represents the starting point of the rollout
+        rollout_policy: a function implemented by the caller Agent instance which represents the rollout policy
 
     Return:
         An integer that represents the token of the winner after the rollout. 
@@ -177,35 +179,7 @@ def rollout(node):
 
     return winner_token
 
-def rollout_policy(node):
-    ''' The policy that the rollout stage is going to follow during rollout
 
-    The rollout policy is a random policy in this version.
-
-    Arguments:
-        node: A Node class instance that represents the starting point of rollout.
-
-    Returns:
-        An integer that represents the token of the winner after the rollout.         
-    '''
-
-    board = deepcopy(node.state)
-    token = node.token
-    while True:
-        legal_moves = board.get_legal_moves()
-
-        move = np.random.choice(legal_moves)
-        board.step(move, token)
-
-        if board.terminated:
-            break
-
-        if token == 1:
-            token = 2
-        else:
-            token = 1
-        
-    return board.winner_token
 
 def backpropagate(node, winner_token, root_token):
     ''' Updates the rollout result all the way up to root
