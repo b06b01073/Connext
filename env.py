@@ -83,7 +83,7 @@ class ConnectX:
             col = self.embedded_player.step(self.board)
             self.last_embedded_player_move = self.board.step(col, self.embedded_player_token)
         
-        # self.display_start()
+        self.display_start()
 
         return self.agent_token, deepcopy(self.board)
 

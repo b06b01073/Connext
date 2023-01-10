@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from mcts_config import config 
+from MCTS.mcts_config import config 
 from copy import deepcopy
 
 C = config['ucb_c']
