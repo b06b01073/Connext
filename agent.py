@@ -18,21 +18,6 @@ class Agent:
         '''
         pass
 
-    def get_legal_moves(self, board):
-        ''' Get legal moves of the given Board class instance
-
-        This Function should be called in the very beginning of step() of the agent
-        
-        Arguments:
-            board: a Board class intances
-
-        Returns:
-            A list of legal moves, each entry in the list represent a playable column in the board. 
-        '''
-        legal_moves = [1 if token == 0 else 0 for token in board[0]] 
-        legal_moves = [i for i in range(len(legal_moves)) if legal_moves[i] == 1]
-        return legal_moves
-
     def flip_board(self, board):
         '''  This function flip the tokens on the board(1 -> 2, 2 -> 1).  
 
@@ -89,7 +74,7 @@ class RandomAgent(Agent):
         Returns:
             A move picked randomly from legal moves.
         '''
-        legal_moves = self.get_legal_moves(board)
+        legal_moves = board.get_legal_moves()
         return np.random.choice(legal_moves)
 
 

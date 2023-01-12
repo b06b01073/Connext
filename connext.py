@@ -4,6 +4,7 @@ from env_config import config
 from copy import deepcopy
 import math
 import random
+from collections import deque
 
 class ConnextAgent():
     def __init__(self):
@@ -87,7 +88,14 @@ class ConnextAgent():
 
 class ReplayBuffer:
     def __init__(self):
-        pass
+        self.buffer = deque(maxlen=1000)
+
+    def append(self, game_record):
+
+        for record in game_record:
+            print(record)
+            self.buffer.append(record)
+
         
 
 class ConnextNet(nn.Module):

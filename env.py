@@ -44,18 +44,28 @@ class ConnectX:
                 0, otherwise
         '''
         self.last_agent_move = self.board.step(col, self.agent_token)
-        if self.board.terminated:   # the self.agent won by making the move 
+        if self.board.has_winner:   # the self.agent won by making the move 
             self.terminated = True
-            return self.board, 1
+            return self.board, 1, self.terminated
+
+
+        if self.board.draw:
+            self.terminated = True
+            return self.board, 0, self.terminated
 
         col = self.embedded_player.step(self.board)
         self.last_embedded_player_move = self.board.step(col, self.embedded_player_token)
-        if self.board.terminated:   # the self.embedded_player won by making the move
+        if self.board.has_winner:   # the self.embedded_player won by making the move
             self.terminated = True
-            return self.board, -1
+            return self.board, -1, self.terminated
         
         # non-terminal state, we should always return an copy to prevent agent modifies the internel state of the env
-        return deepcopy(self.board), 0
+
+        if self.board.draw:
+            self.terminated = True
+            return self.board, 0, self.terminated
+
+        return deepcopy(self.board), 0, self.terminated
         
 
     def register(self, agent):
@@ -83,7 +93,7 @@ class ConnectX:
             col = self.embedded_player.step(self.board)
             self.last_embedded_player_move = self.board.step(col, self.embedded_player_token)
         
-        self.display_start()
+        # self.display_start()
 
         return self.agent_token, deepcopy(self.board)
 
@@ -144,6 +154,8 @@ class Board:
         self.board = np.zeros((self.height, self.width), dtype='uint8')
         self.terminated = False
         self.steps = 0
+        self.has_winner = False
+        self.draw = False
 
         self.winner_token = 0 # 0 if draw, 1 if player with token 1 won, 2 if player with token 2 won
 
@@ -170,6 +182,7 @@ class Board:
                 return row, col
 
 
+
     def __is_end(self, row, col, token):
         ''' The __is_end uses coord (row, col) as a center to check the winning condition
 
@@ -178,15 +191,14 @@ class Board:
             2. Whether the game is a draw        
         '''
 
-        terminated = self.__check_horizontal(row, col, token) or self.__check_vertical(row, col, token) or self.__check_diagonal(row, col, token) or self.steps == self.width * self.height
+        self.has_winner = self.__check_horizontal(row, col, token) or self.__check_vertical(row, col, token) or self.__check_diagonal(row, col, token)
+        if not self.has_winner:
+            self.draw = (self.steps == self.width * self.height)
 
-        if terminated:
+        if self.has_winner:
             self.winner_token = token
 
-        # if self.steps == self.width * self.height:
-        #     print('Maximum steps')
-
-        return terminated
+        return self.has_winner or self.draw
 
     def __check_horizontal(self, row, col, token):
         connected_tokens = 1

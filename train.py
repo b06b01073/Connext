@@ -1,8 +1,9 @@
-from connext import ConnextAgent
+from connext import ConnextAgent, ReplayBuffer
 from env import Board
 
 def train():
     connextAgent = ConnextAgent()
+    replay_buffer = ReplayBuffer()
 
     for i in range(10):
         board = Board()
@@ -12,7 +13,7 @@ def train():
             action = connextAgent.step(board)
             board.step(action, connextAgent.token)
 
-            connextAgent.learn()
+            # connextAgent.learn()
             connextAgent.token = flip_token(connextAgent.token)
 
 

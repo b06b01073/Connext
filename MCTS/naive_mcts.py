@@ -131,7 +131,7 @@ def ucb_search(node, simulation_count):
         simulation_count: a integer that represents the number of simulations has been ran.
 
     Returns:
-        A Node class instance that represents the children of the node parameter which is going to be visited next. 
+        A Node class instance that represents the child of the `node` parameter which is going to be visited next. 
     '''
     max_ucb = float('-inf')
     res = 0
