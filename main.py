@@ -1,6 +1,7 @@
 from agent import RandomAgent, Human, MCTSAgent
 from env import ConnectX
 from tqdm import tqdm
+from connext import ConnextAgent
 
 win = 0
 loss = 0
@@ -12,7 +13,7 @@ def run():
     global draw
 
     env = ConnectX()
-    env.embedded_player = MCTSAgent(simulations=800000)
+    env.embedded_player = ConnextAgent()
 
     agent = Human()
     agent_token, board = env.register(agent)

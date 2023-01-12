@@ -1,6 +1,6 @@
 import numpy as np
 from agent_config import config
-from MCTS.MCTS import naive_mcts
+from MCTS.naive_mcts import naive_mcts
 from copy import deepcopy
 
 class Agent:

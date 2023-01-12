@@ -173,7 +173,7 @@ class Board:
     def __is_end(self, row, col, token):
         ''' The __is_end uses coord (row, col) as a center to check the winning condition
 
-        The returned value `terminated` is decided based on two conditions:
+        The returned value `terminated` is decided base on two conditions:
             1. Whether there is a winner
             2. Whether the game is a draw        
         '''
