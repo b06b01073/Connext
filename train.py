@@ -1,25 +1,34 @@
-from connext import ConnextAgent, ReplayBuffer
+from connext import ConnextAgent
+from replay_buffer import ReplayBuffer
 from env import Board, ConnectX
 from agent import MCTSAgent
 from tqdm import tqdm
+from copy import deepcopy
 
 def train():
     connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
 
-    for i in tqdm(range(1)):
+    for i in tqdm(range(7)):
         board = Board()
         connextAgent.token = 1
 
         while not board.terminated:
-            action = connextAgent.step(board)
+            action = connextAgent.step(deepcopy(board))
             board.step(action, connextAgent.token)
 
             # connextAgent.learn()
             connextAgent.token = flip_token(connextAgent.token)
 
-        if i % 10 == 0:
-            bench_mark(connextAgent)
+            connextAgent.learn(replay_buffer)
+
+        winner_token = board.winner_token
+        connextAgent.update_history(winner_token)
+
+        replay_buffer.append_history(connextAgent.history)
+        connextAgent.clean_history()
+
+        
 
 
 def bench_mark(connextAgent):

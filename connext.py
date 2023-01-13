@@ -1,10 +1,10 @@
 import torch
 from torch import nn
-from env_config import config
+import env_config
+import agent_config
 from copy import deepcopy
 import math
 import random
-from collections import deque
 import torch
 import numpy as np
 
@@ -14,7 +14,8 @@ class ConnextAgent():
         self.connext_net = ConnextNet()
         self.simulations = 3
         self.fake_token = 1
-        self.game_history = []
+        self.history = []
+        self.batch_size = agent_config.config['connext']['batch_size']
 
     def step(self, board):
 
@@ -28,14 +29,20 @@ class ConnextAgent():
             self.policy_mcts(root, root_board)
 
         action_distribution = self.__get_action_distribution(root)
-        self.game_history.append([board, action_distribution])
 
-        return np.argmax(action_distribution)
+        action = np.argmax(action_distribution)
+
+        self.__push_history(board.board.astype('float'), action_distribution)
+
+        return action
+
+    def __push_history(self, board, action_distribution):
+        self.history.append([board, action_distribution])
 
     def __flip_board(self, board):
         
-        width = config['width']
-        height = config['height']
+        width = env_config.config['width']
+        height = env_config.config['height']
 
         for i in range(height):
             for j in range(width):
@@ -46,9 +53,13 @@ class ConnextAgent():
 
         return board
 
-    def learn(self):
-        # sample mini batch from replay buffer and update 
-        pass
+    def learn(self, buffer):
+        if len(buffer.buffer) < self.batch_size:
+            return
+
+        game_positions, action_distributions, results = buffer.sample(self.batch_size)
+        
+        
 
     def policy_mcts(self, root, board):
         node = root
@@ -91,9 +102,6 @@ class ConnextAgent():
         Q =  child.mean_action_value
         return Q + U
 
-    # def __get_ucb(self):
-        
-
 
     def __expand(self, node, board):
         board_tensor = torch.from_numpy(board.board).unsqueeze(0).unsqueeze(0).float()
@@ -106,7 +114,6 @@ class ConnextAgent():
         if board.terminated:
             return value
 
-        
 
         # the terminal node cannot expand
         for legal_move in legal_moves:
@@ -123,7 +130,7 @@ class ConnextAgent():
 
 
     def __get_action_distribution(self, root):
-        action_distribution = np.zeros((config['width']))
+        action_distribution = np.zeros((env_config.config['width']))
         for child in root.children:
             action_distribution[child.last_move] = child.visit_count
 
@@ -132,20 +139,20 @@ class ConnextAgent():
         return action_distribution
         
 
-    # def __play(self, root):
+    def update_history(self, winner_token):
+        for i in range(len(self.history)):
+            token = i % 2 + 1
+            if winner_token == 0:
+                self.history[i].append(0)
+            elif winner_token == token:
+                self.history[i].append(1)
+            else:
+                self.history[i].append(-1)
 
-    #     move = None
-    #     max_visit_count = -1
-    #     width = config['width']
-
-    #     action_distribution = [0 for i in range(width)]
-
-    #     for child in root.children:
-    #         if child.visit_count > max_visit_count:
-    #             move = child.last_move 
-    #             max_visit_count = child.visit_count
-
-    #     return move    
+    
+    def clean_history(self):
+        self.history = []
+            
 
 
 class Node:
@@ -162,17 +169,6 @@ class Node:
     def is_leaf(self):
         return len(self.children) == 0
 
-
-class ReplayBuffer:
-    def __init__(self):
-        self.buffer = deque(maxlen=1000)
-
-    def append(self, game_record):
-
-        for record in game_record:
-            print(record)
-            self.buffer.append(record)
-
         
 
 class ConnextNet(nn.Module):
@@ -180,7 +176,7 @@ class ConnextNet(nn.Module):
         super().__init__()
         self.input_dim = 1
 
-        self.width = config['width']
+        self.width = env_config.config['width']
 
         self.cnn = nn.Sequential(
             nn.Conv2d(in_channels=self.input_dim, out_channels=32, kernel_size=4, stride=2),
@@ -209,7 +205,7 @@ class ConnextNet(nn.Module):
     def forward(self, x):
         x = self.cnn(x)
         x = x.view(x.shape[0], -1)
-        
+
         action_distribution = self.policy_network(x)
         value = self.value_network(x)
 
