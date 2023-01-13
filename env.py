@@ -301,6 +301,9 @@ class Board:
         '''
         Return a list of indices of legal moves
         '''
+        if self.terminated:
+            return None
+
         legal_moves = [1 if token == 0 else 0 for token in self.board[0]] 
         legal_moves = [i for i in range(len(legal_moves)) if legal_moves[i] == 1]
         return legal_moves

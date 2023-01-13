@@ -1,11 +1,13 @@
 from connext import ConnextAgent, ReplayBuffer
-from env import Board
+from env import Board, ConnectX
+from agent import MCTSAgent
+from tqdm import tqdm
 
 def train():
     connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
 
-    for i in range(10):
+    for i in tqdm(range(1)):
         board = Board()
         connextAgent.token = 1
 
@@ -16,6 +18,23 @@ def train():
             # connextAgent.learn()
             connextAgent.token = flip_token(connextAgent.token)
 
+        if i % 10 == 0:
+            bench_mark(connextAgent)
+
+
+def bench_mark(connextAgent):
+    env = ConnectX()
+    env.embedded_player = MCTSAgent(simulations=5)
+
+    agent = connextAgent
+    agent_token, board = env.register(agent)
+    agent.token = agent_token
+
+    while True:
+        action = agent.step(board)
+        board, result, terminated = env.step(action)
+        if terminated:
+            break
 
             
 
