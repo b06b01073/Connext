@@ -20,8 +20,8 @@ class ReplayBuffer:
         results = []
 
         for experience in batch:
-            game_positions.append(torch.from_numpy(experience[0]))
-            action_distributions.append(torch.from_numpy(experience[1]))
+            game_positions.append(self.horizontal_flip(experience[0])) 
+            action_distributions.append(experience[1])
             results.append(experience[2])
 
         game_positions = torch.stack(game_positions)
@@ -29,3 +29,7 @@ class ReplayBuffer:
         results = torch.Tensor(results)
 
         return game_positions, action_distributions, results
+
+    def horizontal_flip(self, board):
+        board = torch.flip(board, dims=[2]) if random.uniform(0, 1) >= 0.5 else board # dim 1 is channel
+        return board
