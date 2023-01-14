@@ -2,6 +2,7 @@ from agent import RandomAgent, Human, MCTSAgent
 from env import ConnectX
 from tqdm import tqdm
 from connext import ConnextAgent
+from copy import deepcopy
 
 win = 0
 loss = 0
@@ -15,13 +16,13 @@ def run():
     env = ConnectX()
     env.embedded_player = RandomAgent()
 
-    agent = RandomAgent()
+    agent = MCTSAgent(simulations=100)
     agent_token, board = env.register(agent)
     agent.token = agent_token
 
 
     while True:
-        action = agent.step(board)
+        action = agent.step(deepcopy(board))
         board, result, terminated = env.step(action)
 
 
@@ -39,6 +40,6 @@ def run():
 if __name__ == '__main__':
 
 
-    for i in tqdm(range(600)):
+    for i in tqdm(range(40)):
         run()
     print(f'win: {win}, loss: {loss}, draw: {draw}')

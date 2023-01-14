@@ -4,6 +4,6 @@ config = {
     }, 
     'connext': {
         'batch_size': 32,
-        'lr':1e-3
+        'lr': 1e-2
     }
 }

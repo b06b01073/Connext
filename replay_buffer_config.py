@@ -1,4 +1,4 @@
 config = {
-    'maxlen': 10000,
+    'maxlen': 5000,
     'batch_size': 32,
 }

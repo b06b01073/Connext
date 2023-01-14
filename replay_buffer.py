@@ -22,7 +22,7 @@ class ReplayBuffer:
         for experience in batch:
             game_positions.append(self.horizontal_flip(experience[0])) 
             action_distributions.append(experience[1])
-            results.append(experience[2])
+            results.append([experience[2]])
 
         game_positions = torch.stack(game_positions)
         action_distributions = torch.stack(action_distributions)
