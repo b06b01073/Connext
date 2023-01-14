@@ -15,20 +15,20 @@ class ReplayBuffer:
         assert len(self.buffer) >= batch_size, 'Not enough data!'
         batch = random.sample(self.buffer, batch_size)
 
-        game_positions = []
+        board_features = []
         action_distributions = []
         results = []
 
         for experience in batch:
-            game_positions.append(experience[0]) 
+            board_features.append(experience[0]) 
             action_distributions.append(experience[1])
             results.append([experience[2]])
 
-        game_positions = torch.stack(game_positions)
+        board_features = torch.stack(board_features)
         action_distributions = torch.stack(action_distributions)
         results = torch.Tensor(results)
 
-        return game_positions, action_distributions, results
+        return board_features, action_distributions, results
 
     def horizontal_flip(self, board):
 

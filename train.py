@@ -12,28 +12,28 @@ def train():
     replay_buffer = ReplayBuffer()
     win_rates = []
     num_self_play = 10
-    clear_buffer_counter = 20
+    clear_buffer_counter = 30
 
     for i in tqdm(range(2500)):
         connextAgent.clean_history()
-        clear_buffer_counter += 1
         if i % clear_buffer_counter == 0:
             replay_buffer.clean_buffer()
-            
-        for _ in range(num_self_play):
-            board = Board()
-            connextAgent.token = 1
-            while not board.terminated:
-                action = connextAgent.step(deepcopy(board))
-                board.step(action, connextAgent.token)
 
-                connextAgent.token = flip_token(connextAgent.token)
 
-            winner_token = board.winner_token
-            connextAgent.update_history(winner_token)
-            replay_buffer.append_history(connextAgent.history)
+        # should use threading to generate self-play data in parellel in the future
+        board = Board()
+        connextAgent.token = 1
+        while not board.terminated:
+            action = connextAgent.step(deepcopy(board))
+            board.step(action, connextAgent.token)
+            connextAgent.learn(replay_buffer)
 
-        connextAgent.learn(replay_buffer)
+            connextAgent.token = flip_token(connextAgent.token)
+
+        winner_token = board.winner_token
+        connextAgent.update_history(winner_token)
+        replay_buffer.append_history(connextAgent.history)
+
 
 
         if (i + 1) % 50 == 0:
