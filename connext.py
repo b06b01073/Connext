@@ -4,14 +4,10 @@ import env_config
 import agent_config
 from copy import deepcopy
 import math
-import random
 import torch
 import numpy as np
 from torch import optim
-from collections import deque
-
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# device = 'cpu'
+from model import ConnextNet
 
 class ConnextAgent():
     def __init__(self):
@@ -21,7 +17,7 @@ class ConnextAgent():
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
-        self.optim = optim.RMSprop(self.connext_net.parameters(), lr=self.lr, weight_decay=1e-2)
+        self.optim = optim.RMSprop(self.connext_net.parameters(), lr=self.lr, weight_decay=1e-3)
         self.mse_loss = nn.MSELoss()
         self.softmax = nn.Softmax(dim=0)
         self.cross_entropy_loss = nn.CrossEntropyLoss()
@@ -41,7 +37,7 @@ class ConnextAgent():
             action_count = self.__get_action_count(root)
             action_distribution = action_count / np.sum(action_count)
 
-            action = self.__sample_action(action_distribution)
+            action = self.__sample_action(action_distribution, True)
 
             if not board.terminated:
                 board_tensor = self.__construct_board(root, board)
@@ -178,10 +174,13 @@ class ConnextAgent():
         self.history = []
             
 
-    def __sample_action(self, action_distribution):
+    def __sample_action(self, action_distribution, deterministic=False):
+
+        if not deterministic:
+            return np.argmax(action_distribution)
+        
         cumulative_distribution = np.cumsum(action_distribution, axis=0)
         point = np.random.uniform(0, 1)
-
 
         for idx, d in enumerate(cumulative_distribution):
             if d >= point:
@@ -204,56 +203,3 @@ class Node:
 
     def is_leaf(self):
         return len(self.children) == 0
-
-        
-
-class ConnextNet(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.input_dim = 2
-
-        self.width = env_config.config['width']
-
-        self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=self.input_dim, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
-        ).to(device)
-
-        self.policy_network = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=2, kernel_size=1, stride=1),
-            nn.BatchNorm2d(2),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(84, self.width),
-        ).to(device)
-
-
-        self.value_network = nn.Sequential(
-            nn.Conv2d(in_channels=128, out_channels=1, kernel_size=1, stride=1),
-            nn.BatchNorm2d(1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(42, 1),
-            nn.Tanh()
-        ).to(device)
-
-
-
-    def forward(self, x):
-        x = self.cnn(x)
-
-        action_distribution = self.policy_network(x)
-        value = self.value_network(x)
-
-        return action_distribution, value
-
-
-    
-        
