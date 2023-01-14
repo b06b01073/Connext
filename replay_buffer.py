@@ -5,7 +5,7 @@ import torch
 
 class ReplayBuffer:
     def __init__(self):
-        self.buffer = deque(maxlen=config['maxlen'])
+        self.buffer = deque()
 
     def append_history(self, history):
         for experience in history:
@@ -20,7 +20,7 @@ class ReplayBuffer:
         results = []
 
         for experience in batch:
-            game_positions.append(self.horizontal_flip(experience[0])) 
+            game_positions.append(experience[0]) 
             action_distributions.append(experience[1])
             results.append([experience[2]])
 
@@ -31,5 +31,12 @@ class ReplayBuffer:
         return game_positions, action_distributions, results
 
     def horizontal_flip(self, board):
+
         board = torch.flip(board, dims=[2]) if random.uniform(0, 1) >= 0.5 else board # dim 1 is channel
         return board
+
+    def augment(self, board):
+        board = self.horizontal_flip(board)
+
+    def clean_buffer(self):
+        self.buffer.clear()

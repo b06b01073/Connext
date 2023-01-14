@@ -9,11 +9,13 @@ import numpy as np
 from torch import optim
 from model import ConnextNet
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 class ConnextAgent():
     def __init__(self):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 100
+        self.simulations = 50
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -37,10 +39,10 @@ class ConnextAgent():
             action_count = self.__get_action_count(root)
             action_distribution = action_count / np.sum(action_count)
 
-            action = self.__sample_action(action_distribution, True)
+            action = self.__sample_action(action_distribution)
 
             if not board.terminated:
-                board_tensor = self.__construct_board(root, board)
+                board_tensor = self.__construct_features(root, board)
                 self.__push_history(board_tensor, action_distribution)
 
             return action
@@ -73,6 +75,8 @@ class ConnextAgent():
         mse_loss = self.mse_loss(result_labels, result_preds)
         cross_entropy_loss = self.cross_entropy_loss(policy_network_preds, action_distribution_labels) 
         loss = mse_loss + cross_entropy_loss
+
+        print(f'mse loss: {mse_loss:.3f}, cross entropy: {cross_entropy_loss: .3f}')
         loss.backward()
         self.optim.step() 
 
@@ -115,7 +119,7 @@ class ConnextAgent():
         return Q + U
 
     def __expand(self, node, board):
-        board_tensor = self.__construct_board(node, board).unsqueeze(0)
+        board_tensor = self.__construct_features(node, board).unsqueeze(0)
         priors, value = self.connext_net(board_tensor)
         priors = self.softmax(priors.squeeze())
         value.squeeze_()
@@ -130,7 +134,7 @@ class ConnextAgent():
 
         return value
 
-    def __construct_board(self, node, board):
+    def __construct_features(self, node, board):
         board_feature = np.zeros((2, self.board_height, self.board_width))
 
         for i in range(self.board_height):
@@ -139,6 +143,16 @@ class ConnextAgent():
                     board_feature[0][i][j] = 1
                 elif board.board[i][j] != 0:
                     board_feature[1][i][j] = 1
+
+        # winning_moves = np.zeros((self.board_width))
+        # losing_moves = np.zeros((self.board_width))
+
+        # legal_moves = board.get_legal_moves()
+
+        # for legal_move in legal_moves:
+        #     board = deepcopy(board)
+        #     board.step(legal_move, node.token)
+        #     if board.winner_token 
 
 
         return torch.from_numpy(board_feature).float().to(device)
@@ -168,7 +182,6 @@ class ConnextAgent():
             else:
                 self.history[i].append(-1)
 
-
     
     def clean_history(self):
         self.history = []
@@ -176,7 +189,7 @@ class ConnextAgent():
 
     def __sample_action(self, action_distribution, deterministic=False):
 
-        if not deterministic:
+        if deterministic:
             return np.argmax(action_distribution)
         
         cumulative_distribution = np.cumsum(action_distribution, axis=0)
