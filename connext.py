@@ -18,7 +18,6 @@ class ConnextAgent():
         super().__init__()
         self.connext_net = ConnextNet()
         self.simulations = 100
-        self.fake_token = 1
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -26,14 +25,14 @@ class ConnextAgent():
         self.mse_loss = nn.MSELoss()
         self.softmax = nn.Softmax(dim=0)
         self.cross_entropy_loss = nn.CrossEntropyLoss()
-        self.lr_scheduler = optim.lr_scheduler.LinearLR(self.optim, start_factor=1, end_factor=1e-4,total_iters=6e4)
+
+        self.board_height = env_config.config['height']
+        self.board_width = env_config.config['width']
 
     def step(self, board):
         with torch.no_grad():
-            if self.token == 2:
-                self.__flip_board(board.board)
 
-            root = Node()
+            root = Node(token=self.token)
             
             for _ in range(self.simulations):
                 root_board = deepcopy(board)
@@ -45,27 +44,14 @@ class ConnextAgent():
             action = self.__sample_action(action_distribution)
 
             if not board.terminated:
-                self.__push_history(board.board.astype('float'), action_distribution)
+                board_tensor = self.__construct_board(root, board)
+                self.__push_history(board_tensor, action_distribution)
 
             return action
 
 
-    def __push_history(self, board, action_distribution):
-        self.history.append([torch.from_numpy(board).float().unsqueeze(0), torch.from_numpy(action_distribution)])
-
-
-    def __flip_board(self, board):
-        
-        width = env_config.config['width']
-        height = env_config.config['height']
-
-        for i in range(height):
-            for j in range(width):
-                if board[i][j] == 1:
-                    board[i][j] = 2
-                elif board[i][j] == 2:
-                    board[i][j] = 1
-
+    def __push_history(self, board_tensor, action_distribution):
+        self.history.append([board_tensor, torch.from_numpy(action_distribution)])
 
     def learn(self, buffer):
         if len(buffer.buffer) < self.batch_size:
@@ -93,9 +79,6 @@ class ConnextAgent():
         loss = mse_loss + cross_entropy_loss
         loss.backward()
         self.optim.step() 
-        self.lr_scheduler.step()
-
-        # print(f'Total loss: {loss:.4f}, MSE loss: {mse_loss.item():.4f}, CrossEntropy loss: {cross_entropy_loss:.4f}')
 
 
     def policy_mcts(self, root, board):
@@ -104,13 +87,9 @@ class ConnextAgent():
 
         # run Select until a leaf node is met
         while not node.is_leaf():
+            token = node.token
             action, node = self.__select_child(node)
-
-
-            # flip the board and always play 1
-            self.__flip_board(board.board)
-
-            board.step(action, self.fake_token)
+            board.step(action, token)
 
         # Expand and evaluate
         value = self.__expand(node, board)
@@ -135,23 +114,38 @@ class ConnextAgent():
 
     def __get_PUCT(self, child, parent):
         U = child.prior * math.sqrt(parent.visit_count) / (1 + child.visit_count)
-        Q =  child.mean_action_value
+        Q = child.mean_action_value
+
         return Q + U
 
     def __expand(self, node, board):
-        board_tensor = torch.from_numpy(board.board).unsqueeze(0).unsqueeze(0).float().to(device)
+        board_tensor = self.__construct_board(node, board).unsqueeze(0)
         priors, value = self.connext_net(board_tensor)
         priors = self.softmax(priors.squeeze())
         value.squeeze_()
 
         legal_moves = board.get_legal_moves()
 
+        child_token = 1 if node.token == 2 else 2
+
         # the terminal node cannot expand
         for legal_move in legal_moves:
-            node.children.append(Node(prior=priors[legal_move], last_move=legal_move, parent=node))
+            node.children.append(Node(token=child_token, prior=priors[legal_move], last_move=legal_move, parent=node))
 
         return value
 
+    def __construct_board(self, node, board):
+        board_feature = np.zeros((2, self.board_height, self.board_width))
+
+        for i in range(self.board_height):
+            for j in range(self.board_width):
+                if board.board[i][j] == node.token:
+                    board_feature[0][i][j] = 1
+                elif board.board[i][j] != 0:
+                    board_feature[1][i][j] = 1
+
+
+        return torch.from_numpy(board_feature).float().to(device)
 
     def __backpropagate(self, value, node):
         while node is not None:
@@ -161,7 +155,7 @@ class ConnextAgent():
 
 
     def __get_action_count(self, root):
-        action_count = np.zeros((env_config.config['width']))
+        action_count = np.zeros((self.board_width))
         for child in root.children:
             action_count[child.last_move] = child.visit_count
 
@@ -177,6 +171,7 @@ class ConnextAgent():
                 self.history[i].append(1)
             else:
                 self.history[i].append(-1)
+
 
     
     def clean_history(self):
@@ -196,7 +191,7 @@ class ConnextAgent():
 
 
 class Node:
-    def __init__(self, prior=None, last_move=None, parent=None):
+    def __init__(self, token, prior=None, last_move=None, parent=None):
 
         self.visit_count = 0
         self.total_action_value = 0
@@ -205,6 +200,7 @@ class Node:
         self.children = []
         self.last_move = last_move
         self.parent = parent
+        self.token = token
 
     def is_leaf(self):
         return len(self.children) == 0
@@ -214,26 +210,37 @@ class Node:
 class ConnextNet(nn.Module):
     def __init__(self):
         super().__init__()
-        self.input_dim = 1
+        self.input_dim = 2
 
         self.width = env_config.config['width']
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=self.input_dim, out_channels=64, kernel_size=4, stride=1),
+            nn.Conv2d(in_channels=self.input_dim, out_channels=128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(128),
             nn.ReLU(),
         ).to(device)
 
         self.policy_network = nn.Sequential(
-            nn.Linear(768, 64),
+            nn.Conv2d(in_channels=128, out_channels=2, kernel_size=1, stride=1),
+            nn.BatchNorm2d(2),
             nn.ReLU(),
-            nn.Linear(64, self.width),
+            nn.Flatten(),
+            nn.Linear(84, self.width),
         ).to(device)
 
 
         self.value_network = nn.Sequential(
-            nn.Linear(768, 64),
+            nn.Conv2d(in_channels=128, out_channels=1, kernel_size=1, stride=1),
+            nn.BatchNorm2d(1),
             nn.ReLU(),
-            nn.Linear(64, 1),
+            nn.Flatten(),
+            nn.Linear(42, 1),
             nn.Tanh()
         ).to(device)
 
@@ -241,7 +248,6 @@ class ConnextNet(nn.Module):
 
     def forward(self, x):
         x = self.cnn(x)
-        x = x.view(x.shape[0], -1)
 
         action_distribution = self.policy_network(x)
         value = self.value_network(x)

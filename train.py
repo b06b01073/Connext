@@ -28,7 +28,8 @@ def train():
         connextAgent.update_history(winner_token)
         replay_buffer.append_history(connextAgent.history)
 
-        if i % 50 == 0:
+
+        if (i + 1) % 50 == 0:
             win_rate = bench_mark(connextAgent)
             win_rates.append(win_rate)
             plt.clf()
