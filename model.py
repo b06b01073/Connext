@@ -24,8 +24,6 @@ class ConnextNet(nn.Module):
         self.res_block3 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block4 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block5 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
-        self.res_block6 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
-        self.res_block7 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
 
         self.policy_network = nn.Sequential(
             nn.Conv2d(in_channels=self.out_channel, out_channels=2, kernel_size=1, stride=1),
@@ -53,6 +51,7 @@ class ConnextNet(nn.Module):
         x = self.res_block2(x)
         x = self.res_block3(x)
         x = self.res_block4(x)
+        x = self.res_block5(x)
 
         action_distribution = self.policy_network(x)
         value = self.value_network(x)
@@ -75,7 +74,6 @@ class ResBlock(nn.Module):
             nn.ReLU(),
         ).to(device)
 
-        self.BN = nn.BatchNorm2d(out_channels).to(device)
         self.relu = nn.ReLU().to(device)
     
     def forward(self, x):
@@ -83,7 +81,6 @@ class ResBlock(nn.Module):
         cnn_result = self.cnn(x)
 
         output = identity + cnn_result
-        output = self.BN(output)
         output = self.relu(output)
         return output
 

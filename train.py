@@ -11,13 +11,13 @@ def main():
     connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
     win_rates = []
-    num_self_play = 100
+    num_self_play = 2
 
     for _ in tqdm(range(300)):
         replay_buffer.clean_buffer()
 
         generate_dataset(connextAgent, replay_buffer, num_self_play)
-        train(connextAgent, replay_buffer, 500)
+        train(connextAgent, replay_buffer, 1000)
 
         win_rate = bench_mark(connextAgent)
         win_rates.append(win_rate)
@@ -72,7 +72,7 @@ def bench_mark(connextAgent, total_games=10):
                     
                     break
 
-
+        torch.save(connextAgent.connext_net.state_dict(), 'model_params.pth')
 
         win_rate = win / total_games
         print(f'win rate: {win_rate}')

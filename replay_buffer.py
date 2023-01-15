@@ -34,20 +34,25 @@ class ReplayBuffer:
 
     def augment(self, experience):
         horizontal_flip_random = random.random() > 0.5
-        board_features, action_distributions, result = experience
+        token_flip_random = random.random() > 0.5
+        board_features, action_distribution, result = experience
 
         flipped_board = board_features.clone()
-        flipped_action_distributions = action_distributions.clone()
+        flipped_action_distribution = action_distribution.clone()
 
         # print(f'original board\n: {board_features}, action_distributions: {action_distributions}')
 
         if horizontal_flip_random:
             flipped_board = torch.flip(flipped_board, dims=[2])
-            flipped_action_distributions = torch.flip(flipped_action_distributions, dims=[0])
+            flipped_action_distribution = torch.flip(flipped_action_distribution, dims=[0])
 
-        # print(f'augmented board after hori_flip: {horizontal_flip_random}, result_flip: {result_flip_random}:\n {board_features}, action_distributions: {action_distributions}')
+        if token_flip_random:
+            flipped_board = torch.flip(flipped_board, dims=[0])
+            result *= -1
 
-        return flipped_board, flipped_action_distributions, result
+        # print(f'augmented board after hori_flip: {horizontal_flip_random}, result_flip: {result_flip_random}:\n {board_features}, action_distribution: {action_distributions}')
+
+        return flipped_board, flipped_action_distribution, result
 
 
     def clean_buffer(self):

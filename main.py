@@ -16,7 +16,7 @@ def run():
     env = ConnectX()
     env.embedded_player = RandomAgent()
 
-    agent = MCTSAgent(simulations=100)
+    agent = MCTSAgent(simulations=50)
     agent_token, board = env.register(agent)
     agent.token = agent_token
 

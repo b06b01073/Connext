@@ -16,7 +16,7 @@ class ConnextAgent(Agent):
     def __init__(self):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 200
+        self.simulations = 800
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -42,7 +42,8 @@ class ConnextAgent(Agent):
             action_count = self.__get_action_count(root)
             action_distribution = action_count / np.sum(action_count)
 
-            action = self.__sample_action(action_distribution)
+            deterministic = True if board.steps >= 5 else False
+            action = self.__sample_action(action_distribution, deterministic)
 
             board_tensor = self.__construct_features(root, board)
             self.__push_history(board_tensor, action_distribution)
@@ -138,6 +139,9 @@ class ConnextAgent(Agent):
             if node.is_root:
                 noise += np.abs(np.random.normal(scale=0.05))
             node.children.append(Node(token=child_token, prior=priors[legal_move] + noise, last_move=legal_move, parent=node))
+
+        if node.token != self.token:
+            value *= -1
 
         return value
 
