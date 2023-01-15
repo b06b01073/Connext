@@ -14,14 +14,16 @@ def run():
     global draw
 
     env = ConnectX()
-    env.embedded_player = RandomAgent()
+    env.embedded_player = ConnextAgent(pre_load='model/model_params_15.pth')
+    env.embedded_player.simulations = 800
 
-    agent = MCTSAgent(simulations=50)
+    agent = Human()
     agent_token, board = env.register(agent)
     agent.token = agent_token
 
 
     while True:
+        env.render()
         action = agent.step(deepcopy(board))
         board, result, terminated = env.step(action)
 

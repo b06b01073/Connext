@@ -2,18 +2,24 @@ from collections import deque
 from replay_buffer_config import config
 import random
 import torch
+import math
 
 class ReplayBuffer:
     def __init__(self):
-        self.buffer = deque()
+        self.buffer = deque(maxlen=10)
 
-    def append_history(self, history):
-        for experience in history:
-            self.buffer.append(experience)
+    def append_dataset(self, game_history):
+        self.buffer.append(game_history)
 
     def sample(self, batch_size=config['batch_size']):
-        assert len(self.buffer) >= batch_size, 'Not enough data!'
-        batch = random.sample(self.buffer, batch_size)
+        batch = []
+
+        for i in range(len(self.buffer)):
+            sample_size = batch_size // len(self.buffer)
+            if i == len(self.buffer) - 1:
+                sample_size += batch_size % len(self.buffer)
+            
+            batch += random.sample(self.buffer[i], sample_size)
 
         board_features = []
         action_distributions = []
@@ -34,7 +40,6 @@ class ReplayBuffer:
 
     def augment(self, experience):
         horizontal_flip_random = random.random() > 0.5
-        token_flip_random = random.random() > 0.5
         board_features, action_distribution, result = experience
 
         flipped_board = board_features.clone()
@@ -46,9 +51,6 @@ class ReplayBuffer:
             flipped_board = torch.flip(flipped_board, dims=[2])
             flipped_action_distribution = torch.flip(flipped_action_distribution, dims=[0])
 
-        if token_flip_random:
-            flipped_board = torch.flip(flipped_board, dims=[0])
-            result *= -1
 
         # print(f'augmented board after hori_flip: {horizontal_flip_random}, result_flip: {result_flip_random}:\n {board_features}, action_distribution: {action_distributions}')
 

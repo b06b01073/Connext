@@ -11,13 +11,11 @@ def main():
     connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
     win_rates = []
-    num_self_play = 2
+    num_self_play = 60
 
-    for _ in tqdm(range(300)):
-        replay_buffer.clean_buffer()
-
+    for i in tqdm(range(300)):
         generate_dataset(connextAgent, replay_buffer, num_self_play)
-        train(connextAgent, replay_buffer, 1000)
+        train(connextAgent, replay_buffer, 200)
 
         win_rate = bench_mark(connextAgent)
         win_rates.append(win_rate)
@@ -27,9 +25,12 @@ def main():
         plt.savefig('win_rates.png')
 
         # print(f'episode: {i}, total loss: {total_loss}')
+        if i % 5 == 0:
+            torch.save(connextAgent.connext_net.state_dict(), f'model/model_params_{i}.pth')
 
 def generate_dataset(connextAgent, replay_buffer, num_self_play):
     game_len = 0
+    dataset = []
     for _ in tqdm(range(num_self_play)):
         connextAgent.clean_history()
         board = Board()
@@ -42,13 +43,22 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
 
         winner_token = board.winner_token
         connextAgent.update_history(winner_token)
-        replay_buffer.append_history(connextAgent.history)
+        dataset += connextAgent.history
 
+    replay_buffer.append_dataset(dataset)
     print(f'avg game len: {game_len / num_self_play}')
 
 def train(connextAgent, replay_buffer, epochs):
+    total_mse = 0
+    total_cross = 0
     for _ in range(epochs):
-        connextAgent.learn(replay_buffer)
+        mse_loss, cross_entropy_los = connextAgent.learn(replay_buffer)
+
+        with torch.no_grad():
+            total_mse += mse_loss
+            total_cross += cross_entropy_los
+    
+    print(f'avg mse loss: {total_mse / epochs}, avg cross loss: {total_cross / epochs}')
 
 def bench_mark(connextAgent, total_games=10):
     print(f'bench_marking...')
@@ -68,11 +78,10 @@ def bench_mark(connextAgent, total_games=10):
                     if result == 1:
                         win += 1
                     print(f'game {i}, result: {result}')
-                    env.render()
+                    # env.render()
                     
                     break
 
-        torch.save(connextAgent.connext_net.state_dict(), 'model_params.pth')
 
         win_rate = win / total_games
         print(f'win rate: {win_rate}')

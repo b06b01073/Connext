@@ -13,10 +13,10 @@ from agent import Agent
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class ConnextAgent(Agent):
-    def __init__(self):
+    def __init__(self, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 800
+        self.simulations = 200
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -29,6 +29,9 @@ class ConnextAgent(Agent):
 
         self.board_height = env_config.config['height']
         self.board_width = env_config.config['width']
+
+        if pre_load is not None:
+            self.connext_net.load_state_dict(torch.load(pre_load))
 
     def step(self, board):
         with torch.no_grad():
@@ -55,9 +58,6 @@ class ConnextAgent(Agent):
         self.history.append([board_tensor, torch.from_numpy(action_distribution)])
 
     def learn(self, buffer):
-        if len(buffer.buffer) < self.batch_size:
-            return
-
         game_positions, action_distribution_labels, result_labels = buffer.sample(self.batch_size)
 
 
@@ -79,7 +79,7 @@ class ConnextAgent(Agent):
         cross_entropy_loss = self.cross_entropy_loss(policy_network_preds, action_distribution_labels) 
         loss = mse_loss + cross_entropy_loss
 
-        print(f'mse loss: {mse_loss:.3f}, cross entropy: {cross_entropy_loss: .3f}')
+        # print(f'mse loss: {mse_loss:.3f}, cross entropy: {cross_entropy_loss: .3f}')
         loss.backward()
         self.optim.step() 
 
@@ -154,17 +154,6 @@ class ConnextAgent(Agent):
                     board_feature[0][i][j] = 1
                 elif board.board[i][j] != 0:
                     board_feature[1][i][j] = 1
-
-        # winning_moves = np.zeros((self.board_width))
-        # losing_moves = np.zeros((self.board_width))
-
-        # legal_moves = board.get_legal_moves()
-
-        # for legal_move in legal_moves:
-        #     board = deepcopy(board)
-        #     board.step(legal_move, node.token)
-        #     if board.winner_token 
-
 
         return torch.from_numpy(board_feature).float().to(device)
 

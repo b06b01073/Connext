@@ -14,7 +14,7 @@ class ConnextNet(nn.Module):
         self.out_channel = 64
 
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=self.input_dim, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(in_channels=self.input_dim, out_channels=self.out_channel, kernel_size=4, stride=1, padding=2),
             nn.BatchNorm2d(self.out_channel),
             nn.ReLU(),
         ).to(device)
@@ -24,13 +24,19 @@ class ConnextNet(nn.Module):
         self.res_block3 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block4 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block5 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
+        self.res_block5 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
+        self.res_block6 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
+        self.res_block7 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
+        self.res_block8 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
+        self.res_block9 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
+        self.res_block10 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
 
         self.policy_network = nn.Sequential(
             nn.Conv2d(in_channels=self.out_channel, out_channels=2, kernel_size=1, stride=1),
             nn.BatchNorm2d(2),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(84, self.width),
+            nn.Linear(112, self.width),
         ).to(device)
 
 
@@ -39,7 +45,7 @@ class ConnextNet(nn.Module):
             nn.BatchNorm2d(1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(42, 1),
+            nn.Linear(56, 1),
             nn.Tanh()
         ).to(device)
 
@@ -52,6 +58,11 @@ class ConnextNet(nn.Module):
         x = self.res_block3(x)
         x = self.res_block4(x)
         x = self.res_block5(x)
+        x = self.res_block6(x)
+        x = self.res_block7(x)
+        x = self.res_block8(x)
+        x = self.res_block9(x)
+        x = self.res_block10(x)
 
         action_distribution = self.policy_network(x)
         value = self.value_network(x)
