@@ -13,10 +13,29 @@ from agent import Agent
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 class ConnextAgent(Agent):
+    ''' The connext agent class 
+
+    Arguments:
+        pre_load: the path to the model parameters. If specified, the params is loaded.
+
+    Public attribute:
+        connext_net: the neural network of the policy network and value network
+        simulations: the number of simulations during the MCTS
+        history: a list that record an episode of the gameplay
+        batch_size: the size of batch that is going to be fetched from the replay buffer
+        lr: learning rate
+        prior_baseline: the min value of the prior, this ensure every node in the MCTS have the U value
+        optim: optimizer
+        mse_loss: loss function for the difference between the actual game result and the value network prediction
+        cross_entropy_loss: loss function for the difference between the MCTS result and the policy network prediction
+        board_height: the height of the connect4 board
+        board_width: the width of the connect4 board
+    '''
+
     def __init__(self, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 200
+        self.simulations = 200  
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -34,30 +53,58 @@ class ConnextAgent(Agent):
             self.connext_net.load_state_dict(torch.load(pre_load))
 
     def step(self, board):
-        with torch.no_grad():
+        ''' Decide the next move based on the result of MCTS given the board 
 
+        Arguments:
+            board: a Board class instance
+
+        Returns: 
+            it return the next move made by the agent
+        '''
+        with torch.no_grad():
+            
+            # the root of the search tree
             root = Node(is_root=True, token=self.token)
             
+            # run MCTS
             for _ in range(self.simulations):
                 root_board = deepcopy(board)
                 self.policy_mcts(root, root_board)
 
+
+            # calculate the distribution of the action space
             action_count = self.__get_action_count(root)
             action_distribution = action_count / np.sum(action_count)
 
+            # make the move
             deterministic = True if board.steps >= 5 else False
             action = self.__sample_action(action_distribution, deterministic)
 
-            board_tensor = self.__construct_features(root, board)
-            self.__push_history(board_tensor, action_distribution)
+            # construct the board features and store it into the game history(self.history)
+            board_features = self.__construct_features(root, board)
+            self.__push_history(board_features, action_distribution)
 
             return action
 
 
-    def __push_history(self, board_tensor, action_distribution):
-        self.history.append([board_tensor, torch.from_numpy(action_distribution)])
+    def __push_history(self, board_features, action_distribution):
+        ''' Push the board features and the result of MCTS into the game history, it is going to be pushed into the replay buffer in the future.
+
+        Arguments:
+            board_features: the torch tensor represent the features
+            action_distribution: the distribution of the action space based on the MCTS 
+        '''
+        self.history.append([board_features, torch.from_numpy(action_distribution)])
 
     def learn(self, buffer):
+        ''' The optimization step that modifies the model params
+
+        It sample the data from the replay buffer, and calculate the loss based on the loss function defined on the paper.
+
+        Arguments:
+            buffer: the replay buffer where the training data is from
+        '''
+
         game_positions, action_distribution_labels, result_labels = buffer.sample(self.batch_size)
 
 
@@ -87,6 +134,13 @@ class ConnextAgent(Agent):
 
 
     def policy_mcts(self, root, board):
+        ''' Do the MCTS based on the policy network
+
+        Arguments:
+            root: a Node class instance that represents the root of the search tree
+            board: a Board class instance that represents the current board
+        '''
+
         node = root
         node.visit_count += 1
 
@@ -105,6 +159,14 @@ class ConnextAgent(Agent):
 
             
     def __select_child(self, node):
+        ''' Select the next visited child during MCTS based on the PUCT value
+
+        Arguments: 
+            node: A node class instance that represent the parent node
+
+        Returns:
+            the move that is made to reach the selected child and the selected child
+        '''
         max_PUCT = float('-inf')
         selected_child = None
 
@@ -118,12 +180,29 @@ class ConnextAgent(Agent):
         return selected_child.last_move, selected_child
 
     def __get_PUCT(self, child, parent):
+        ''' An implementaion of PUCT formula, the formula is listed on the Method section in the AlphaGo Zero paper. The PUCT value is based on two major components, the expected reward and the uncertainty.
+
+        Arguments:
+            child: A Node class instance that represent the child 
+            parent: A Node class instance that represent the parent
+        '''
         U = (child.prior + self.prior_baseline) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
         Q = child.mean_action_value
 
         return Q + U
 
     def __expand(self, node, board):
+        ''' Expand the leaf node(add the children to the leaf node, a child is added only if there is a legel move to transit to that child).
+
+        During the expansion, it evaluate and initialize the child node based on the output of the self.connext_net
+
+        Arguments
+            node: A Node class intance that represents the leaf node
+            board: A Board class intance that represents the current board  
+
+        Returns:
+            returns the expected outcome evaluated by the self.connext_net, the returned value is going to take part in the backpropogation step
+        '''
         board_tensor = self.__construct_features(node, board).unsqueeze(0)
         priors, value = self.connext_net(board_tensor)
         priors = self.softmax(priors.squeeze())
@@ -133,19 +212,36 @@ class ConnextAgent(Agent):
 
         child_token = 1 if node.token == 2 else 2
 
-        # the terminal node cannot expand
         for legal_move in legal_moves:
             noise = 0
+            # add noise to encourage exploration during simulation
             if node.is_root:
                 noise += np.abs(np.random.normal(scale=0.05))
             node.children.append(Node(token=child_token, prior=priors[legal_move] + noise, last_move=legal_move, parent=node))
 
+
+        # if the node.token is not same as the root token, then the result should * (-1).
         if node.token != self.token:
             value *= -1
 
         return value
 
     def __construct_features(self, node, board):
+        ''' Contruct the board features
+
+        The contructed board features is of the form (2, self.board_height, self.board_width).
+
+        第一個channel: 當board上在某(x, y)座標上有與當前玩家有相同的token(node.token)時, 則在feature plane上的(x, y)被mark為1, 其餘座標上的值皆為0
+        第二個channel: 當board上在某(x, y)座標上有與當前玩家有不同的token(node.token)時, 則在feature plane上的(x, y)被mark為1, 其餘座標上的值皆為0
+
+        Arguments:
+            node: A Node class intance that represents the current node
+            board: A Board class intance that represents the current board 
+
+        Returns:
+            the constructed board features
+        '''
+
         board_feature = np.zeros((2, self.board_height, self.board_width))
 
         for i in range(self.board_height):
@@ -158,6 +254,12 @@ class ConnextAgent(Agent):
         return torch.from_numpy(board_feature).float().to(device)
 
     def __backpropagate(self, value, node):
+        ''' Backup the value of the leaf node all the way up to the root
+
+        Arguments
+            value: the updated value from the expansion stage
+            node: A Node class intance that represents the current node
+        '''
         while node is not None:
             node.total_action_value += value
             node.mean_action_value = node.total_action_value / node.visit_count
@@ -165,6 +267,14 @@ class ConnextAgent(Agent):
 
 
     def __get_action_count(self, root):
+        ''' put the visited count of the children of the root into a single numpy array
+
+        Arguments:
+            root: the root of the search tree
+        Returns:
+            returns the visited count of the childrent
+        '''
+
         action_count = np.zeros((self.board_width))
         for child in root.children:
             action_count[child.last_move] = child.visit_count
@@ -173,6 +283,11 @@ class ConnextAgent(Agent):
         
 
     def update_history(self, winner_token):
+        ''' It is called after the game has ended. It update the result of the game to every single entry in the self.history.
+
+        Arguments:
+            winner_token: the token that represents the winner
+        '''
         for i in range(len(self.history)):
             player_token = i % 2 + 1
             if winner_token == 0:
@@ -184,10 +299,21 @@ class ConnextAgent(Agent):
 
     
     def clean_history(self):
+        ''' clean the outdated history
+        '''
         self.history = []
             
 
     def __sample_action(self, action_distribution, deterministic=False):
+        ''' It samples the action based on the action_distribution. There are two versions of the sampling methods, the first one samples the action proportion to the action_distribution, the second one directly sample the action with the largest distribution value.
+
+        Arguments:
+            action_distribution: A numpy array that represents the distribution of action space
+            deterministic: the sampling type
+
+        Returns: 
+            the sampled action
+        '''
 
         if deterministic:
             return np.argmax(action_distribution)

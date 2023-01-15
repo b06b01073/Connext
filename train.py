@@ -13,7 +13,7 @@ def main():
     win_rates = []
     num_self_play = 60
 
-    for i in tqdm(range(300)):
+    for i in tqdm(range(300), desc='Episode'):
         generate_dataset(connextAgent, replay_buffer, num_self_play)
         train(connextAgent, replay_buffer, 200)
 
@@ -29,9 +29,16 @@ def main():
             torch.save(connextAgent.connext_net.state_dict(), f'model/model_params_{i}.pth')
 
 def generate_dataset(connextAgent, replay_buffer, num_self_play):
+    ''' Generate dataset that is going to be used in the next training step in main, and append the game history to the replay buffer
+
+    Arguments: 
+        connextAgent: the connext agent
+        replay_buffer: the replay buffer
+        num_self_play: the number of times the self-play is going to happen to generate the dataset, it is going to generate `num_self_play` of gameplay
+    '''
     game_len = 0
     dataset = []
-    for _ in tqdm(range(num_self_play)):
+    for _ in tqdm(range(num_self_play), desc='Generating Dataset'):
         connextAgent.clean_history()
         board = Board()
         connextAgent.token = 1
