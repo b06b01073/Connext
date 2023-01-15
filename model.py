@@ -52,6 +52,7 @@ class ConnextNet(nn.Module):
         x = self.res_block1(x)
         x = self.res_block2(x)
         x = self.res_block3(x)
+        x = self.res_block4(x)
 
         action_distribution = self.policy_network(x)
         value = self.value_network(x)

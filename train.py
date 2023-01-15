@@ -13,11 +13,11 @@ def main():
     win_rates = []
     num_self_play = 100
 
-    for _ in tqdm(range(1000)):
+    for _ in tqdm(range(300)):
         replay_buffer.clean_buffer()
 
         generate_dataset(connextAgent, replay_buffer, num_self_play)
-        train(connextAgent, replay_buffer, 200)
+        train(connextAgent, replay_buffer, 500)
 
         win_rate = bench_mark(connextAgent)
         win_rates.append(win_rate)

@@ -8,17 +8,20 @@ import torch
 import numpy as np
 from torch import optim
 from model import ConnextNet
+from agent import Agent
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-class ConnextAgent():
+class ConnextAgent(Agent):
     def __init__(self):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 50
+        self.simulations = 200
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
+        self.prior_baseline = agent_config.config['connext']['prior_baseline']
+
         self.optim = optim.RMSprop(self.connext_net.parameters(), lr=self.lr, weight_decay=1e-3)
         self.mse_loss = nn.MSELoss()
         self.softmax = nn.Softmax(dim=0)
@@ -30,7 +33,7 @@ class ConnextAgent():
     def step(self, board):
         with torch.no_grad():
 
-            root = Node(token=self.token)
+            root = Node(is_root=True, token=self.token)
             
             for _ in range(self.simulations):
                 root_board = deepcopy(board)
@@ -41,9 +44,8 @@ class ConnextAgent():
 
             action = self.__sample_action(action_distribution)
 
-            if not board.terminated:
-                board_tensor = self.__construct_features(root, board)
-                self.__push_history(board_tensor, action_distribution)
+            board_tensor = self.__construct_features(root, board)
+            self.__push_history(board_tensor, action_distribution)
 
             return action
 
@@ -80,6 +82,8 @@ class ConnextAgent():
         loss.backward()
         self.optim.step() 
 
+        return mse_loss, cross_entropy_loss
+
 
     def policy_mcts(self, root, board):
         node = root
@@ -113,7 +117,7 @@ class ConnextAgent():
         return selected_child.last_move, selected_child
 
     def __get_PUCT(self, child, parent):
-        U = child.prior * math.sqrt(parent.visit_count) / (1 + child.visit_count)
+        U = (child.prior + self.prior_baseline) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
         Q = child.mean_action_value
 
         return Q + U
@@ -130,7 +134,10 @@ class ConnextAgent():
 
         # the terminal node cannot expand
         for legal_move in legal_moves:
-            node.children.append(Node(token=child_token, prior=priors[legal_move], last_move=legal_move, parent=node))
+            noise = 0
+            if node.is_root:
+                noise += np.abs(np.random.normal(scale=0.05))
+            node.children.append(Node(token=child_token, prior=priors[legal_move] + noise, last_move=legal_move, parent=node))
 
         return value
 
@@ -203,7 +210,7 @@ class ConnextAgent():
 
 
 class Node:
-    def __init__(self, token, prior=None, last_move=None, parent=None):
+    def __init__(self, token, is_root=False, prior=None, last_move=None, parent=None):
 
         self.visit_count = 0
         self.total_action_value = 0
@@ -212,6 +219,7 @@ class Node:
         self.children = []
         self.last_move = last_move
         self.parent = parent
+        self.is_root = is_root
         self.token = token
 
     def is_leaf(self):
