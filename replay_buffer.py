@@ -20,6 +20,8 @@ class ReplayBuffer:
         results = []
 
         for experience in batch:
+            # add back the augment if the training is stable
+            # experience = self.augment(experience)
             board_features.append(experience[0]) 
             action_distributions.append(experience[1])
             results.append([experience[2]])
@@ -30,13 +32,20 @@ class ReplayBuffer:
 
         return board_features, action_distributions, results
 
-    def horizontal_flip(self, board):
+    def augment(self, experience):
+        horizontal_flip_random = random.random() > 0.5
+        board_features, action_distributions, result = experience
 
-        board = torch.flip(board, dims=[2]) if random.uniform(0, 1) >= 0.5 else board # dim 1 is channel
-        return board
+        # print(f'original board\n: {board_features}, action_distributions: {action_distributions}')
 
-    def augment(self, board):
-        board = self.horizontal_flip(board)
+        if horizontal_flip_random:
+            board_features = torch.flip(board_features, dims=[2])
+            action_distributions = torch.flip(action_distributions, dims=[0])
+
+        # print(f'augmented board after hori_flip: {horizontal_flip_random}, result_flip: {result_flip_random}:\n {board_features}, action_distributions: {action_distributions}')
+
+        return board_features, action_distributions, result
+
 
     def clean_buffer(self):
         self.buffer.clear()

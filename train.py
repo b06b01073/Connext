@@ -7,45 +7,48 @@ from copy import deepcopy
 import torch
 import matplotlib.pyplot as plt
 
-def train():
+def main():
     connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
     win_rates = []
-    num_self_play = 10
-    clear_buffer_counter = 30
+    num_self_play = 100
 
-    for i in tqdm(range(2500)):
+    for _ in tqdm(range(1000)):
+        replay_buffer.clean_buffer()
+
+        generate_dataset(connextAgent, replay_buffer, num_self_play)
+        train(connextAgent, replay_buffer, 200)
+
+        win_rate = bench_mark(connextAgent)
+        win_rates.append(win_rate)
+        plt.clf()
+        plt.plot(win_rates)
+
+        plt.savefig('win_rates.png')
+
+        # print(f'episode: {i}, total loss: {total_loss}')
+
+def generate_dataset(connextAgent, replay_buffer, num_self_play):
+    game_len = 0
+    for _ in tqdm(range(num_self_play)):
         connextAgent.clean_history()
-        if i % clear_buffer_counter == 0:
-            replay_buffer.clean_buffer()
-
-
-        # should use threading to generate self-play data in parellel in the future
         board = Board()
         connextAgent.token = 1
         while not board.terminated:
+            game_len += 1
             action = connextAgent.step(deepcopy(board))
             board.step(action, connextAgent.token)
-            connextAgent.learn(replay_buffer)
-
             connextAgent.token = flip_token(connextAgent.token)
 
         winner_token = board.winner_token
         connextAgent.update_history(winner_token)
         replay_buffer.append_history(connextAgent.history)
 
+    print(f'avg game len: {game_len / num_self_play}')
 
-
-        if (i + 1) % 50 == 0:
-            win_rate = bench_mark(connextAgent)
-            win_rates.append(win_rate)
-            plt.clf()
-            plt.plot(win_rates)
-
-        plt.savefig('win_rates.png')
-
-        # print(f'episode: {i}, total loss: {total_loss}')
-
+def train(connextAgent, replay_buffer, epochs):
+    for _ in range(epochs):
+        connextAgent.learn(replay_buffer)
 
 def bench_mark(connextAgent, total_games=10):
     print(f'bench_marking...')
@@ -84,4 +87,4 @@ def flip_token(token):
 
 
 if __name__ == '__main__':
-    train()
+    main()
