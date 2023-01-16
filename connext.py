@@ -35,7 +35,7 @@ class ConnextAgent(Agent):
     def __init__(self, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 200  
+        self.simulations = 100  
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -186,7 +186,7 @@ class ConnextAgent(Agent):
             child: A Node class instance that represent the child 
             parent: A Node class instance that represent the parent
         '''
-        U = (child.prior + self.prior_baseline) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
+        U = (child.prior) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
         Q = child.mean_action_value
 
         return Q + U
@@ -217,12 +217,20 @@ class ConnextAgent(Agent):
 
         child_token = 1 if node.token == 2 else 2
 
+        if node.is_root:
+            alpha = [0.3 for _ in range(len(legal_moves))]
+            noise = np.random.dirichlet(alpha=alpha)
+
+            noise = torch.from_numpy(noise).to(device)
+            i = 0
+            eta = 0.25
+            for legal_move in legal_moves:
+                priors[legal_move] = (1 - eta) * priors[legal_move] + eta * noise[i]
+                i += 1 
+
+
         for legal_move in legal_moves:
-            noise = 0
-            # add noise to encourage exploration during simulation
-            if node.is_root:
-                noise += np.abs(np.random.normal(scale=0.05))
-            node.children.append(Node(token=child_token, prior=priors[legal_move] + noise, last_move=legal_move, parent=node))
+            node.children.append(Node(token=child_token, prior=priors[legal_move], last_move=legal_move, parent=node))
 
 
         # if the node.token is not same as the root token, then the result should * (-1).

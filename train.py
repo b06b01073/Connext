@@ -11,7 +11,7 @@ def main():
     connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
     win_rates = []
-    num_self_play = 60
+    num_self_play = 30
 
     for i in tqdm(range(300), desc='Episode'):
         generate_dataset(connextAgent, replay_buffer, num_self_play)
