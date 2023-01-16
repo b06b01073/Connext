@@ -193,8 +193,8 @@ def backpropagate(node, winner_token, root_token):
     '''
 
     # backpropagate all the way up to root
+    score = get_score(winner_token, root_token) # ex: if winner_token == node.token, then the current player is expected to win from this state
     while not node.is_root:
-        score = get_score(winner_token, root_token) # ex: if winner_token == node.token, then the current player is expected to win from this state
         node.expected_reward = update_expected_reward(node, score)
         node = node.parent
 

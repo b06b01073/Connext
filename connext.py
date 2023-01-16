@@ -203,7 +203,12 @@ class ConnextAgent(Agent):
         Returns:
             returns the expected outcome evaluated by the self.connext_net, the returned value is going to take part in the backpropogation step
         '''
+
+        # if it is a terminated node, then we should return the actual outcome 
+
         board_tensor = self.__construct_features(node, board).unsqueeze(0)
+
+        # potential bug: priors on illegal moves make the prior of legal moves not sums up to 1
         priors, value = self.connext_net(board_tensor)
         priors = self.softmax(priors.squeeze())
         value.squeeze_()
@@ -302,7 +307,9 @@ class ConnextAgent(Agent):
         ''' clean the outdated history
         '''
         self.history = []
-            
+
+    def set_simulations(self, simulations):
+        self.simulations = simulations
 
     def __sample_action(self, action_distribution, deterministic=False):
         ''' It samples the action based on the action_distribution. There are two versions of the sampling methods, the first one samples the action proportion to the action_distribution, the second one directly sample the action with the largest distribution value.

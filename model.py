@@ -24,12 +24,8 @@ class ConnextNet(nn.Module):
         self.res_block3 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block4 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block5 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
-        self.res_block5 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block6 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
         self.res_block7 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
-        self.res_block8 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
-        self.res_block9 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
-        self.res_block10 = ResBlock(in_channels=self.out_channel, out_channels=self.out_channel, kernel_size=3, stride=1, padding=1)
 
         self.policy_network = nn.Sequential(
             nn.Conv2d(in_channels=self.out_channel, out_channels=2, kernel_size=1, stride=1),
@@ -60,9 +56,6 @@ class ConnextNet(nn.Module):
         x = self.res_block5(x)
         x = self.res_block6(x)
         x = self.res_block7(x)
-        x = self.res_block8(x)
-        x = self.res_block9(x)
-        x = self.res_block10(x)
 
         action_distribution = self.policy_network(x)
         value = self.value_network(x)

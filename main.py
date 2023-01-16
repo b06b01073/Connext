@@ -14,8 +14,10 @@ def run():
     global draw
 
     env = ConnectX()
-    env.embedded_player = ConnextAgent(pre_load='model/model_params_15.pth')
-    env.embedded_player.simulations = 800
+    connext_agent = ConnextAgent(pre_load='model/model_params_15.pth')
+    connext_agent.set_simulations(1000)
+    env.embedded_player = connext_agent
+    
 
     agent = Human()
     agent_token, board = env.register(agent)
