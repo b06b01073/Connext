@@ -14,21 +14,20 @@ def run():
     global draw
 
     env = ConnectX()
-    connext_agent = ConnextAgent(pre_load='model/model_params_15.pth')
-    connext_agent.set_simulations(1000)
+    connext_agent = ConnextAgent()
+    connext_agent.set_simulations(100)
     env.embedded_player = connext_agent
     
 
-    agent = Human()
+    agent = RandomAgent()
+    # agent.set_simulations(200)
     agent_token, board = env.register(agent)
     agent.token = agent_token
 
 
     while True:
-        env.render()
         action = agent.step(deepcopy(board))
         board, result, terminated = env.step(action)
-
 
         if terminated:
             if result == 1:
@@ -37,13 +36,12 @@ def run():
                 draw += 1
             else:
                 loss += 1
-
             break
 
 
 if __name__ == '__main__':
 
 
-    for i in tqdm(range(40)):
+    for i in tqdm(range(10)):
         run()
     print(f'win: {win}, loss: {loss}, draw: {draw}')

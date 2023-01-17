@@ -15,7 +15,7 @@ def main():
 
     for i in tqdm(range(300), desc='Episode'):
         generate_dataset(connextAgent, replay_buffer, num_self_play)
-        train(connextAgent, replay_buffer, 200)
+        train(connextAgent, replay_buffer, 1000)
 
         win_rate = bench_mark(connextAgent)
         win_rates.append(win_rate)
@@ -38,7 +38,7 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
     '''
     game_len = 0
     dataset = []
-    for _ in tqdm(range(num_self_play), desc='Generating Dataset'):
+    for i in tqdm(range(num_self_play), desc='Generating Dataset'):
         connextAgent.clean_history()
         board = Board()
         connextAgent.token = 1
@@ -48,6 +48,7 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
             board.step(action, connextAgent.token)
             connextAgent.token = flip_token(connextAgent.token)
 
+        print(board.board)
         winner_token = board.winner_token
         connextAgent.update_history(winner_token)
         dataset += connextAgent.history
@@ -72,6 +73,7 @@ def bench_mark(connextAgent, total_games=10):
     with torch.no_grad():
         win = 0
         for i in range(total_games):
+            game_len = 0
             env = ConnectX()
             env.embedded_player = RandomAgent()
 
@@ -79,16 +81,17 @@ def bench_mark(connextAgent, total_games=10):
             connextAgent.token = agent_token
 
             while True:
+                game_len += 1
                 action = connextAgent.step(deepcopy(board))
                 board, result, terminated = env.step(action)
                 if terminated:
                     if result == 1:
                         win += 1
-                    print(f'game {i}, result: {result}')
+                    print(f'game {i}, result: {result}, game len: {game_len}')
                     # env.render()
                     
                     break
-
+            
 
         win_rate = win / total_games
         print(f'win rate: {win_rate}')

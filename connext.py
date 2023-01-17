@@ -35,13 +35,13 @@ class ConnextAgent(Agent):
     def __init__(self, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 100  
+        self.simulations = 30
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
         self.prior_baseline = agent_config.config['connext']['prior_baseline']
 
-        self.optim = optim.RMSprop(self.connext_net.parameters(), lr=self.lr, weight_decay=1e-3)
+        self.optim = optim.RMSprop(self.connext_net.parameters(), lr=self.lr, weight_decay=1e-4)
         self.mse_loss = nn.MSELoss()
         self.softmax = nn.Softmax(dim=0)
         self.cross_entropy_loss = nn.CrossEntropyLoss()
@@ -77,12 +77,13 @@ class ConnextAgent(Agent):
             action_distribution = action_count / np.sum(action_count)
 
             # make the move
-            deterministic = True if board.steps >= 5 else False
+            deterministic = True if board.steps >= 8 else False
             action = self.__sample_action(action_distribution, deterministic)
 
             # construct the board features and store it into the game history(self.history)
             board_features = self.__construct_features(root, board)
             self.__push_history(board_features, action_distribution)
+
 
             return action
 
@@ -151,7 +152,7 @@ class ConnextAgent(Agent):
             board.step(action, token)
 
         # Expand and evaluate
-        value = self.__expand(node, board)
+        value = self.__expand(node, root, board)
 
         # Backup
         self.__backpropagate(value, node)
@@ -189,9 +190,9 @@ class ConnextAgent(Agent):
         U = (child.prior) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
         Q = child.mean_action_value
 
-        return Q + U
+        return -Q + U
 
-    def __expand(self, node, board):
+    def __expand(self, node, root, board):
         ''' Expand the leaf node(add the children to the leaf node, a child is added only if there is a legel move to transit to that child).
 
         During the expansion, it evaluate and initialize the child node based on the output of the self.connext_net
@@ -211,7 +212,7 @@ class ConnextAgent(Agent):
         # potential bug: priors on illegal moves make the prior of legal moves not sums up to 1
         priors, value = self.connext_net(board_tensor)
         priors = self.softmax(priors.squeeze())
-        value.squeeze_()
+        value = value.squeeze().item()
 
         legal_moves = board.get_legal_moves()
 
@@ -232,12 +233,19 @@ class ConnextAgent(Agent):
         for legal_move in legal_moves:
             node.children.append(Node(token=child_token, prior=priors[legal_move], last_move=legal_move, parent=node))
 
+        if board.terminated:
+            value = self.get_terminal_value(node.token, board.winner_token)
 
-        # if the node.token is not same as the root token, then the result should * (-1).
-        if node.token != self.token:
-            value *= -1
 
         return value
+
+    def get_terminal_value(self, node_token, winner_token):
+        if node_token == winner_token:
+            return 1
+        elif winner_token == 0:
+            return 0
+        else:
+            return -1
 
     def __construct_features(self, node, board):
         ''' Contruct the board features
@@ -277,6 +285,7 @@ class ConnextAgent(Agent):
             node.total_action_value += value
             node.mean_action_value = node.total_action_value / node.visit_count
             node = node.parent
+            value *= -1
 
 
     def __get_action_count(self, root):

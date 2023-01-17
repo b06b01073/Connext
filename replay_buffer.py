@@ -6,7 +6,7 @@ import math
 
 class ReplayBuffer:
     def __init__(self):
-        self.buffer = deque(maxlen=10)
+        self.buffer = deque(maxlen=5)
 
     def append_dataset(self, game_history):
         self.buffer.append(game_history)

@@ -197,6 +197,7 @@ def backpropagate(node, winner_token, root_token):
     while not node.is_root:
         node.expected_reward = update_expected_reward(node, score)
         node = node.parent
+        # score *= -1
 
 
 def get_score(winner_token, root_token):
