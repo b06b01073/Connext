@@ -6,6 +6,7 @@ from tqdm import tqdm
 from copy import deepcopy
 import torch
 import matplotlib.pyplot as plt
+from concurrent.futures import ThreadPoolExecutor
 
 def main():
     connextAgent = ConnextAgent(time_per_move=3)
@@ -36,14 +37,22 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
         replay_buffer: the replay buffer
         num_self_play: the number of times the self-play is going to happen to generate the dataset, it is going to generate `num_self_play` of gameplay
     '''
-    game_len = 0
+
     dataset = []
-    for i in tqdm(range(num_self_play), desc='Generating Dataset'):
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(play, deepcopy(connextAgent)) for _ in range(num_self_play)]
+        for future in futures:
+            dataset += future.result()
+
+    replay_buffer.append_dataset(dataset)
+
+def play(connextAgent, num_self_play=20):
+    dataset = []
+    for i in range(num_self_play):
         connextAgent.clean_history()
         board = Board()
         connextAgent.token = 1
         while not board.terminated:
-            game_len += 1
             action = connextAgent.step(deepcopy(board))
             board.step(action, connextAgent.token)
             connextAgent.token = flip_token(connextAgent.token)
@@ -52,8 +61,7 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
         connextAgent.update_history(winner_token)
         dataset += connextAgent.history
 
-    replay_buffer.append_dataset(dataset)
-    print(f'avg game len: {game_len / num_self_play}')
+    return dataset
 
 def train(connextAgent, replay_buffer, epochs):
     total_mse = 0

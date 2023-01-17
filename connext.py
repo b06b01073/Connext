@@ -36,7 +36,7 @@ class ConnextAgent(Agent):
     def __init__(self, time_per_move=None, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 600
+        self.simulations = 2
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
