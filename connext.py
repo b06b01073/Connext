@@ -74,7 +74,7 @@ class ConnextAgent(Agent):
             
             # run MCTS
             start_time = time.time()
-            for _ in range(self.simulations):
+            for i in range(self.simulations):
 
                 root_board = deepcopy(board)
                 self.policy_mcts(root, root_board)

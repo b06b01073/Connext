@@ -47,7 +47,6 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
             action = connextAgent.step(deepcopy(board))
             board.step(action, connextAgent.token)
             connextAgent.token = flip_token(connextAgent.token)
-            print(board.board)
 
         winner_token = board.winner_token
         connextAgent.update_history(winner_token)
