@@ -9,6 +9,7 @@ import numpy as np
 from torch import optim
 from model import ConnextNet
 from agent import Agent
+import time
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -32,10 +33,10 @@ class ConnextAgent(Agent):
         board_width: the width of the connect4 board
     '''
 
-    def __init__(self, pre_load=None):
+    def __init__(self, time_per_move=None, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 30
+        self.simulations = 600
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -48,6 +49,11 @@ class ConnextAgent(Agent):
 
         self.board_height = env_config.config['height']
         self.board_width = env_config.config['width']
+
+        self.time_per_move = float('inf')
+
+        if time_per_move is not None:
+            self.time_per_move = time_per_move
 
         if pre_load is not None:
             self.connext_net.load_state_dict(torch.load(pre_load))
@@ -67,10 +73,15 @@ class ConnextAgent(Agent):
             root = Node(is_root=True, token=self.token)
             
             # run MCTS
+            start_time = time.time()
             for _ in range(self.simulations):
+
                 root_board = deepcopy(board)
                 self.policy_mcts(root, root_board)
 
+                end_time = time.time()
+                if end_time - start_time >= self.time_per_move:
+                    break
 
             # calculate the distribution of the action space
             action_count = self.__get_action_count(root)

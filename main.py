@@ -14,13 +14,12 @@ def run():
     global draw
 
     env = ConnectX()
-    connext_agent = ConnextAgent()
-    connext_agent.set_simulations(100)
+    connext_agent = MCTSAgent(simulations=400)
     env.embedded_player = connext_agent
     
 
-    agent = RandomAgent()
-    # agent.set_simulations(200)
+    agent = ConnextAgent(pre_load='model/model_params_10.pth')
+    agent.set_simulations(250)
     agent_token, board = env.register(agent)
     agent.token = agent_token
 
@@ -42,6 +41,6 @@ def run():
 if __name__ == '__main__':
 
 
-    for i in tqdm(range(10)):
+    for i in tqdm(range(40)):
         run()
     print(f'win: {win}, loss: {loss}, draw: {draw}')

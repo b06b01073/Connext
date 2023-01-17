@@ -8,12 +8,12 @@ import torch
 import matplotlib.pyplot as plt
 
 def main():
-    connextAgent = ConnextAgent()
+    connextAgent = ConnextAgent(time_per_move=3)
     replay_buffer = ReplayBuffer()
     win_rates = []
     num_self_play = 30
 
-    for i in tqdm(range(300), desc='Episode'):
+    for i in tqdm(range(1000), desc='Episode'):
         generate_dataset(connextAgent, replay_buffer, num_self_play)
         train(connextAgent, replay_buffer, 1000)
 
@@ -47,8 +47,8 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
             action = connextAgent.step(deepcopy(board))
             board.step(action, connextAgent.token)
             connextAgent.token = flip_token(connextAgent.token)
+            print(board.board)
 
-        print(board.board)
         winner_token = board.winner_token
         connextAgent.update_history(winner_token)
         dataset += connextAgent.history
