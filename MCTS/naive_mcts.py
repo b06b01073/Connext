@@ -157,7 +157,7 @@ def get_ucb(node, simulation_count):
     Returns:
         A float that represents the value of UCB result.
     '''
-    return node.expected_reward + C * math.sqrt(math.log(simulation_count) / node.visited_count)
+    return -node.expected_reward + C * math.sqrt(math.log(simulation_count) / node.visited_count)
 
 def rollout(node, rollout_policy):
     ''' Do the rollout from the node
@@ -193,14 +193,14 @@ def backpropagate(node, winner_token, root_token):
     '''
 
     # backpropagate all the way up to root
-    score = get_score(winner_token, root_token) # ex: if winner_token == node.token, then the current player is expected to win from this state
     while not node.is_root:
+        score = get_score(winner_token, node.token) # ex: if winner_token == node.token, then the current player is expected to win from this state
         node.expected_reward = update_expected_reward(node, score)
         node = node.parent
         # score *= -1
 
 
-def get_score(winner_token, root_token):
+def get_score(winner_token, node_token):
     ''' Decides the score of a simulation that is going to take part in the update.
 
     Arguments:
@@ -216,7 +216,7 @@ def get_score(winner_token, root_token):
     '''
 
     score = None
-    if winner_token == root_token:
+    if winner_token == node_token:
         score = 1
     elif winner_token == 0:
         score = 0

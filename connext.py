@@ -36,7 +36,7 @@ class ConnextAgent(Agent):
     def __init__(self, time_per_move=None, pre_load=None):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 2
+        self.simulations = 600
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -215,6 +215,8 @@ class ConnextAgent(Agent):
         Returns:
             returns the expected outcome evaluated by the self.connext_net, the returned value is going to take part in the backpropogation step
         '''
+        if board.terminated:
+            value = self.get_terminal_value(node.token, board.winner_token)
 
         # if it is a terminated node, then we should return the actual outcome 
 
@@ -243,9 +245,6 @@ class ConnextAgent(Agent):
 
         for legal_move in legal_moves:
             node.children.append(Node(token=child_token, prior=priors[legal_move], last_move=legal_move, parent=node))
-
-        if board.terminated:
-            value = self.get_terminal_value(node.token, board.winner_token)
 
 
         return value

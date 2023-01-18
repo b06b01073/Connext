@@ -59,3 +59,9 @@ class ReplayBuffer:
 
     def clean_buffer(self):
         self.buffer.clear()
+
+    def __len__(self):
+        return len(self.buffer)
+
+    def __getitem__(self, idx):
+        return self.buffer[idx]

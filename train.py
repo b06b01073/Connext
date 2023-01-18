@@ -12,7 +12,7 @@ def main():
     connextAgent = ConnextAgent(time_per_move=3)
     replay_buffer = ReplayBuffer()
     win_rates = []
-    num_self_play = 30
+    num_self_play = 10
 
     for i in tqdm(range(1000), desc='Episode'):
         generate_dataset(connextAgent, replay_buffer, num_self_play)
@@ -25,7 +25,6 @@ def main():
 
         plt.savefig('win_rates.png')
 
-        # print(f'episode: {i}, total loss: {total_loss}')
         if i % 5 == 0:
             torch.save(connextAgent.connext_net.state_dict(), f'model/model_params_{i}.pth')
 
@@ -39,14 +38,23 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
     '''
 
     dataset = []
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [executor.submit(play, deepcopy(connextAgent)) for _ in range(num_self_play)]
+    connextAgent.clean_history()
+    max_workers = 8
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [executor.submit(play, deepcopy(connextAgent)) for _ in range(max_workers)]
+        i = 0
         for future in futures:
-            dataset += future.result()
+            result = future.result()
+            dataset += result
+            i += 1
+            print(f'collect {i}: {len(result)}')
 
     replay_buffer.append_dataset(dataset)
+    print(f'collected board positions: {len(replay_buffer[-1])}')
 
-def play(connextAgent, num_self_play=20):
+
+def play(connextAgent):
+    num_self_play = 15
     dataset = []
     for i in range(num_self_play):
         connextAgent.clean_history()
