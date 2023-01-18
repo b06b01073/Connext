@@ -14,13 +14,12 @@ def run():
     global draw
 
     env = ConnectX()
-    connext_agent = ConnextAgent(pre_load='model/model_params_30.pth')
+    connext_agent = ConnextAgent(pre_load='model/model_params_35.pth')
     connext_agent.set_simulations(200)
     env.embedded_player = connext_agent
     
 
-    agent = ConnextAgent(pre_load='model/model_params_30.pth')
-    connext_agent.set_simulations(200)
+    agent = MCTSAgent(simulations=200)
     agent_token, board = env.register(agent)
     agent.token = agent_token
 

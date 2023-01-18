@@ -163,7 +163,7 @@ class ConnextAgent(Agent):
             board.step(action, token)
 
         # Expand and evaluate
-        value = self.__expand(node, root, board)
+        value = self.__expand(node, board)
 
         # Backup
         self.__backpropagate(value, node)
@@ -203,7 +203,7 @@ class ConnextAgent(Agent):
 
         return -Q + U
 
-    def __expand(self, node, root, board):
+    def __expand(self, node, board):
         ''' Expand the leaf node(add the children to the leaf node, a child is added only if there is a legel move to transit to that child).
 
         During the expansion, it evaluate and initialize the child node based on the output of the self.connext_net
@@ -216,7 +216,8 @@ class ConnextAgent(Agent):
             returns the expected outcome evaluated by the self.connext_net, the returned value is going to take part in the backpropogation step
         '''
         if board.terminated:
-            value = self.get_terminal_value(node.token, board.winner_token)
+            value = self.get_terminal_value(board.winner_token)
+            return value
 
         # if it is a terminated node, then we should return the actual outcome 
 
@@ -249,10 +250,8 @@ class ConnextAgent(Agent):
 
         return value
 
-    def get_terminal_value(self, node_token, winner_token):
-        if node_token == winner_token:
-            return 1
-        elif winner_token == 0:
+    def get_terminal_value(self, winner_token):
+        if winner_token == 0:
             return 0
         else:
             return -1
