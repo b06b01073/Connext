@@ -5,6 +5,7 @@ config = {
     'connext': {
         'batch_size': 64,
         'lr': 1e-3,
-        'prior_baseline': 0.005
+        'prior_baseline': 0.05,
+        'puct_coef': 2,
     }
 }

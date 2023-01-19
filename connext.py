@@ -10,6 +10,7 @@ from torch import optim
 from model import ConnextNet
 from agent import Agent
 import time
+import random
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -33,14 +34,15 @@ class ConnextAgent(Agent):
         board_width: the width of the connect4 board
     '''
 
-    def __init__(self, time_per_move=None, pre_load=None):
+    def __init__(self, time_per_move=None, pre_load=None, training=True):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 600
+        self.simulations = 400
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
         self.prior_baseline = agent_config.config['connext']['prior_baseline']
+        self.puct_coef = agent_config.config['connext']['puct_coef']
 
         self.optim = optim.RMSprop(self.connext_net.parameters(), lr=self.lr, weight_decay=1e-4)
         self.mse_loss = nn.MSELoss()
@@ -49,6 +51,10 @@ class ConnextAgent(Agent):
 
         self.board_height = env_config.config['height']
         self.board_width = env_config.config['width']
+
+        self.noisy_steps = 8
+
+        self.training = training
 
         self.time_per_move = float('inf')
 
@@ -68,7 +74,7 @@ class ConnextAgent(Agent):
             it return the next move made by the agent
         '''
         with torch.no_grad():
-            
+
             # the root of the search tree
             root = Node(is_root=True, token=self.token)
             
@@ -88,7 +94,7 @@ class ConnextAgent(Agent):
             action_distribution = action_count / np.sum(action_count)
 
             # make the move
-            deterministic = True if board.steps >= 8 else False
+            deterministic = True if board.steps >= self.noisy_steps or not self.training else False
             action = self.__sample_action(action_distribution, deterministic)
 
             # construct the board features and store it into the game history(self.history)
@@ -198,7 +204,7 @@ class ConnextAgent(Agent):
             child: A Node class instance that represent the child 
             parent: A Node class instance that represent the parent
         '''
-        U = (child.prior) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
+        U = self.puct_coef * (child.prior + self.prior_baseline) * math.sqrt(parent.visit_count) / (1 + child.visit_count)
         Q = child.mean_action_value
 
         return -Q + U
@@ -313,21 +319,17 @@ class ConnextAgent(Agent):
         return action_count
         
 
-    def update_history(self, winner_token):
+    def update_history(self, result):
         ''' It is called after the game has ended. It update the result of the game to every single entry in the self.history.
 
         Arguments:
-            winner_token: the token that represents the winner
+            result: the result of the game from the last player's point of view
         '''
-        for i in range(len(self.history)):
-            player_token = i % 2 + 1
-            if winner_token == 0:
-                self.history[i].append(0)
-            elif winner_token == player_token:
-                self.history[i].append(1)
-            else:
-                self.history[i].append(-1)
+        for i in range(len(self.history) - 1, -1, -1):
+            self.history[i].append(result)
 
+            # flip the result, since the players take turns to play
+            result *= -1
     
     def clean_history(self):
         ''' clean the outdated history
@@ -359,6 +361,12 @@ class ConnextAgent(Agent):
                 return idx 
         
 
+    def make_random_move(self, board):
+        legal_moves = board.get_legal_moves()
+
+        # clean the history, since the outcome cannot reflect the effect of previous moves anymore
+        self.clean_history()
+        return np.random.choice(legal_moves)
 
 
 class Node:
