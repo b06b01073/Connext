@@ -5,5 +5,5 @@ test.py
 pick_agent.py
 !model/model_params.pth
 *.txt
-plot.py
+!asset/plot.png
 !requirements.txt
