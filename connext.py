@@ -10,7 +10,6 @@ from torch import optim
 from model import ConnextNet
 from agent import Agent
 import time
-import random
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -32,12 +31,14 @@ class ConnextAgent(Agent):
         cross_entropy_loss: loss function for the difference between the MCTS result and the policy network prediction
         board_height: the height of the connect4 board
         board_width: the width of the connect4 board
+        noisy_steps: the agent will sample actions proportion to their visit_count in the first `noisy_steps` of moves in the game
+        
     '''
 
     def __init__(self, time_per_move=None, pre_load=None, training=True):
         super().__init__()
         self.connext_net = ConnextNet()
-        self.simulations = 400
+        self.simulations = 200
         self.history = []
         self.batch_size = agent_config.config['connext']['batch_size']
         self.lr = agent_config.config['connext']['lr']
@@ -98,8 +99,10 @@ class ConnextAgent(Agent):
             action = self.__sample_action(action_distribution, deterministic)
 
             # construct the board features and store it into the game history(self.history)
-            board_features = self.__construct_features(root, board)
-            self.__push_history(board_features, action_distribution)
+
+            if self.training:
+                board_features = self.__construct_features(root, board)
+                self.__push_history(board_features, action_distribution)
 
 
             return action
@@ -238,7 +241,7 @@ class ConnextAgent(Agent):
 
         child_token = 1 if node.token == 2 else 2
 
-        if node.is_root:
+        if node.is_root and self.training:
             alpha = [0.3 for _ in range(len(legal_moves))]
             noise = np.random.dirichlet(alpha=alpha)
 

@@ -9,17 +9,16 @@ import matplotlib.pyplot as plt
 from concurrent.futures import ThreadPoolExecutor
 
 def main():
-    connextAgent = ConnextAgent(time_per_move=3)
+    connextAgent = ConnextAgent()
     replay_buffer = ReplayBuffer()
     win_rates = []
-    num_self_play = 10
 
     for i in tqdm(range(300), desc='Episode'):
-        generate_dataset(connextAgent, replay_buffer, num_self_play)
-        train(connextAgent, replay_buffer, 300)
+        generate_dataset(connextAgent, replay_buffer)
+        train(connextAgent, replay_buffer, epochs=400)
 
 
-        bench_mark_games = 40
+        bench_mark_games = 20
         win_games = 0
         with ThreadPoolExecutor(max_workers=bench_mark_games) as executor:
             futures = [executor.submit(bench_mark, deepcopy(connextAgent)) for _ in range(bench_mark_games)]
@@ -41,7 +40,7 @@ def main():
 
         torch.save(connextAgent.connext_net.state_dict(), f'model/noisy/model_params_{i}.pth')
 
-def generate_dataset(connextAgent, replay_buffer, num_self_play):
+def generate_dataset(connextAgent, replay_buffer):
     ''' Generate dataset that is going to be used in the next training step in main, and append the game history to the replay buffer
 
     Arguments: 
@@ -52,7 +51,7 @@ def generate_dataset(connextAgent, replay_buffer, num_self_play):
 
     dataset = []
     connextAgent.clean_history()
-    max_workers = 400
+    max_workers = 16
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [executor.submit(play, deepcopy(connextAgent)) for _ in range(max_workers)]
         for idx, future in enumerate(futures):
@@ -106,22 +105,22 @@ def train(connextAgent, replay_buffer, epochs):
     
     print(f'avg mse loss: {total_mse / epochs}, avg cross loss: {total_cross / epochs}')
 
-def bench_mark(connextAgent, total_games=1):
+def bench_mark(connextAgent):
     with torch.no_grad():
-        for _ in range(total_games):
-            game_len = 0
-            env = ConnectX()
-            env.embedded_player = MCTSAgent(simulations=200)
+        connextAgent.training = False
+        game_len = 0
+        env = ConnectX()
+        env.embedded_player = MCTSAgent(simulations=200)
 
-            agent_token, board = env.register(connextAgent)
-            connextAgent.token = agent_token
+        agent_token, board = env.register(connextAgent)
+        connextAgent.token = agent_token
 
-            while True:
-                game_len += 1
-                action = connextAgent.step(deepcopy(board))
-                board, result, terminated = env.step(action)
-                if terminated:
-                    return result, game_len
+        while True:
+            game_len += 1
+            action = connextAgent.step(deepcopy(board))
+            board, result, terminated = env.step(action)
+            if terminated:
+                return result, game_len
 
 
 def flip_token(token):

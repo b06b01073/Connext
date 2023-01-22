@@ -2,11 +2,10 @@ from collections import deque
 from replay_buffer_config import config
 import random
 import torch
-import math
 
 class ReplayBuffer:
     def __init__(self):
-        self.buffer = deque(maxlen=4)
+        self.buffer = deque(maxlen=8)
 
     def append_dataset(self, game_history):
         self.buffer.append(game_history)

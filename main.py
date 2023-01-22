@@ -5,28 +5,31 @@ from connext import ConnextAgent
 from copy import deepcopy
 
 win = 0
-loss = 0
+lose = 0
 draw = 0
 
 def run():
     global win
-    global loss
+    global lose
     global draw
 
+    model_path = 'model/model_params.pth'
+
     env = ConnectX()
-    connext_agent = ConnextAgent(pre_load='model/model_params_70.pth', training=False)
-    connext_agent.set_simulations(50)
-    env.embedded_player = connext_agent
+    embedded_agent = MCTSAgent(4000)
+    env.embedded_player = embedded_agent
+
+    connext_agent = ConnextAgent(pre_load=model_path, training=False)
+    connext_agent.set_simulations(200)
     
 
-    agent = MCTSAgent(50)
-    agent_token, board = env.register(agent)
-    agent.token = agent_token
+    agent_token, board = env.register(connext_agent)
+    connext_agent.token = agent_token
 
 
     while True:
         env.render()
-        action = agent.step(deepcopy(board))
+        action = connext_agent.step(deepcopy(board))
         board, result, terminated = env.step(action)
 
         if terminated:
@@ -35,13 +38,13 @@ def run():
             elif result == 0:
                 draw += 1
             else:
-                loss += 1
+                lose += 1
             break
 
 
 if __name__ == '__main__':
 
-
-    for i in tqdm(range(60)):
+    games = 60
+    for i in tqdm(range(games)):
         run()
-    print(f'win: {win}, loss: {loss}, draw: {draw}')
+    print(f'win: {win}, lose: {lose}, draw: {draw}')

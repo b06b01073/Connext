@@ -2,3 +2,8 @@ __pycache__
 test.py
 *.png
 *.pth
+pick_agent.py
+!model/model_params.pth
+*.txt
+plot.py
+!requirements.txt
