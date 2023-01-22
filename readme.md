@@ -8,6 +8,12 @@ This is a side project inspired by DeepMind's research on AlphaGo, AlphaGo Zero 
 According to [Wikipedia](https://en.wikipedia.org/wiki/Connect_Four): 
 Connect Four (also known as Connect 4) is a two-player connection board game, in which the players choose a color and then take turns dropping colored tokens into a seven-column, six-row vertically suspended grid. The pieces fall straight down, occupying the lowest available space within the column. The objective of the game is to be the first to form a horizontal, vertical, or diagonal line of four of one's own tokens. 
 
+<p align="center">
+  <img src="https://github.com/b06b01073/Connext/blob/main/asset/Connect_Four.gif" />
+</p>
+
+source: [Silver Spoon](https://commons.wikimedia.org/wiki/File:Connect_Four.gif)
+
 ### Connext
 In this project, we built an agent called Connext that learns how to play Connect 4 without any human intervention or human labeled data, Connext knows only the rules of the game. This makes Connext a highly generalized model which should be able to learn to play other games by providing solely the rules, since it requires no hand-crafted data or guidance from human experts. 
 
@@ -16,7 +22,7 @@ During the training, it generates its own traning data from the self-play game r
 ### Implementation
 In our implementaion, we combine the policy network and value network into one single network, just like what AlphaGo Zero did. While making decisions, Connext performs Monte Carlo tree search(MCTS) guided by the policy and value network without any rollout when the search reaches a leaf node.
 
-We use ResNet as the backbone(5 residual blocks in total), and the output from ResNet is sent to the policy network and value network respectively.
+We use ResNet as the backbone(5 residual blocks in total), and the output from ResNet is sent to the policy network and the value network respectively.
 
 ## How to run this project
 
@@ -30,14 +36,20 @@ $ python model.py       # get the torchsummary of the model
 ## Evaluation
 In the evalution part, we use the agent that make decisions based purely on MCTS as the benchmark(we will use the notation <agent_name>X to represent the agent that runs X simulations per move. For example, MCTS3000 means the MCTS agent runs 3000 simulations per move). 
 
-We run Connext200 against MCTS3000 to test the strength of our agent(the model parameters is in the `model` folder). They play 60 games head-to-head
+We let Connext200 play against MCTS200, MCTS500, MCTS1000, MCTS2000, MCTS3000 and MCTS4000 to test the strength of our model(the model parameters is in the `model` folder). Connext200 play 60 games head-to-head against each opponent, the result is in the figure below.
+
+<p align="center">
+  <img src="https://github.com/b06b01073/Connext/blob/main/asset/plot.png" />
+</p>
+
+The result shows that our model dominates the games against agent which based purely on MCTS under the same number of simulations, and it also shows that Connext200 plays at a competitive level against MCTS3000, an agent that runs 15x more simulations per move than Connext200, this shows the power of the policy network and the value network inside Connext.
 
 There are some work can be done to improve the performance of the model:
 
 * Add more residual blocks to the model in `model.py`. This should theoretically improve the performance of the model.
 * Increase the number of simulations during training. This will generate high quality dataset.
 
-The reason why we did not do the things mentioned above is due to the constraint from our hardware(RTX 2070). It takes roughly 50 hours of training for 100 iterations :(.
+The reason why we did not do the things mentioned above is due to the constraint from our hardware(RTX 2070). It took roughly 50 hours of training for 100 iterations :(.
 
 ## References
 1. [Mastering the game of Go with deep neural networks and tree search](https://www.nature.com/articles/nature16961)
